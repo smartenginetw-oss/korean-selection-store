@@ -4,4 +4,5 @@
 .heading p { margin: 0; }
 .tools { display: flex; gap: 10px; }.tools select { max-width: 170px; }
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 30px 12px; }
-@media (min-width: 768px) { .heading { grid-template-columns: 1fr auto; align-items: end; }.grid { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 38px 20px; } }
+@media (min-width: 768px) { .heading { grid-template-columns: 1fr auto; align-items: end; } }
+@media (min-width: 1024px) { .grid { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 38px 20px; } }
