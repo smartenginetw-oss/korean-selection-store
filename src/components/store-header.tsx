@@ -13,6 +13,16 @@ const navigation = [
   ["LIFESTYLE", "/products?category=lifestyle"],
 ];
 
+function Icon({ name }: { name: "search" | "account" | "bag" }) {
+  const paths = {
+    search: <><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></>,
+    account: <><circle cx="12" cy="8" r="3.5" /><path d="M5 21a7 7 0 0 1 14 0" /></>,
+    bag: <><path d="M5 8.5h14l-1 12H6l-1-12Z" /><path d="M9 8.5V6a3 3 0 0 1 6 0v2.5" /></>,
+  };
+
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
+}
+
 export function StoreHeader() {
   const [open, setOpen] = useState(false);
   const { count } = useCart();
@@ -27,9 +37,9 @@ export function StoreHeader() {
           {navigation.map(([label, href]) => <Link key={label} href={href}>{label}</Link>)}
         </nav>
         <div className={styles.actions}>
-          <Link href="/products" aria-label="搜尋商品">⌕</Link>
-          <Link href="/login" aria-label="會員帳號">♙</Link>
-          <Link className={styles.cart} href="/cart" aria-label={`購物車，共 ${count} 件商品`}>袋<span>{count}</span></Link>
+          <Link className={styles.iconLink} href="/products" aria-label="搜尋商品" title="搜尋商品"><Icon name="search" /></Link>
+          <Link className={styles.iconLink} href="/login" aria-label="會員帳號" title="會員帳號"><Icon name="account" /></Link>
+          <Link className={`${styles.iconLink} ${styles.cart}`} href="/cart" aria-label={`購物車，共 ${count} 件商品`} title="購物車"><Icon name="bag" /><span>{count}</span></Link>
         </div>
       </div>
       {open && <nav id="mobile-navigation" className={styles.mobileNav} aria-label="手機導覽">
