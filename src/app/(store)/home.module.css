@@ -39,7 +39,7 @@
   .hero { padding-top: 24px; }
   .heroInner { border-radius: 30px; }
   .heroCopy { padding: clamp(48px, 12vw, 72px) 36px clamp(56px, 12vw, 76px); }
-  .heroCopy h1 { max-width: 12ch; margin: 26px 0 28px; font-size: clamp(2.5rem, 11vw, 3.8rem); line-height: 1.08; }
+  .heroCopy h1 { max-width: 12ch; margin: 26px 0 28px; font-size: clamp(2.35rem, 10vw, 3.5rem); line-height: 1.08; text-wrap: balance; }
   .heroCopy p { margin-bottom: 40px; }
   .heroCopy .button { min-height: 56px; padding-inline: 34px; }
 }
