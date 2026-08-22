@@ -1,0 +1,7 @@
+.footer { margin-top: 72px; padding: 56px 0 24px; background: #332f2c; color: #f7f4ef; }
+.grid { display: grid; gap: 36px; }
+.grid > div:not(:first-child) { display: grid; align-content: start; gap: 9px; }
+.grid p, .grid a { color: #d5cdc5; font-size: .9rem; }
+.logo { font-size: 1.4rem; letter-spacing: .2em; }
+.bottom { margin-top: 40px; padding-top: 20px; border-top: 1px solid rgb(255 255 255 / 15%); color: #bdb5ad; font-size: .78rem; }
+@media (min-width: 768px) { .grid { grid-template-columns: 2fr 1fr 1fr; } }

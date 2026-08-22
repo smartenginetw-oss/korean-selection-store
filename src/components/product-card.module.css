@@ -1,0 +1,11 @@
+.card { min-width: 0; }
+.imageLink { position: relative; display: block; }
+.badges { position: absolute; top: 10px; left: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.info { display: grid; gap: 6px; padding-top: 12px; }
+.info > a { min-height: 48px; font-size: .92rem; line-height: 1.5; }
+.swatches { display: flex; gap: 5px; }
+.swatches span { width: 10px; height: 10px; border-radius: 50%; background: var(--color-accent-taupe); border: 1px solid var(--color-border-strong); }
+.swatches span:nth-child(2) { background: var(--color-secondary); }
+.price { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; font-variant-numeric: tabular-nums; }
+.price del { color: var(--color-text-muted); font-size: .8rem; }
+.price strong { color: var(--color-primary); }

@@ -1,0 +1,2 @@
+-- The final checkout transaction migration includes the quoted record refs.
+-- This marker preserves the remote migration history.

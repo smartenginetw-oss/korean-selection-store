@@ -1,0 +1,2 @@
+-- The final checkout transaction migration includes the camelCase variantId
+-- parser. This marker preserves the remote migration history.
