@@ -1,4 +1,4 @@
-# 韓國選品自營電商 V1
+# GYEOT 韓國男裝自營電商 V1
 
 Next.js App Router、TypeScript 與 Supabase 架構的單一品牌電商。
 

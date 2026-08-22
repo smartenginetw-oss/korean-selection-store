@@ -8,10 +8,10 @@ import styles from "./store-header.module.css";
 const navigation = [
   ["NEW", "/products?sort=newest"],
   ["ALL", "/products"],
-  ["WOMEN", "/products?category=women"],
-  ["MEN", "/products?category=men"],
+  ["TOPS", "/products?category=tops"],
+  ["BOTTOMS", "/products?category=bottoms"],
+  ["OUTERWEAR", "/products?category=outerwear"],
   ["ACCESSORIES", "/products?category=accessories"],
-  ["LIFESTYLE", "/products?category=lifestyle"],
 ];
 
 function Icon({ name }: { name: "search" | "account" | "bag" }) {
@@ -33,7 +33,7 @@ export function StoreHeader() {
         <button className={styles.menuButton} type="button" aria-expanded={open} aria-controls="mobile-navigation" onClick={() => setOpen((value) => !value)}>
           <span aria-hidden="true">{open ? "×" : "☰"}</span><span className={styles.srOnly}>選單</span>
         </button>
-        <Link className={`${styles.logo} serif`} href="/">MORII</Link>
+        <Link className={`${styles.logo} serif`} href="/">GYEOT</Link>
         <nav className={styles.desktopNav} aria-label="主要導覽">
           {navigation.map(([label, href]) => <Link key={label} href={href}>{label}</Link>)}
         </nav>

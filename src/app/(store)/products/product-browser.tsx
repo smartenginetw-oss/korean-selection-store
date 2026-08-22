@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { ProductCard } from "@/components/product-card";
-import type { Product } from "@/features/catalog/data";
+import type { Product, ProductCategory } from "@/features/catalog/data";
 import styles from "./products.module.css";
 
 type AvailabilityFilter = "all" | "in_stock" | "preorder";
+type CategoryFilter = "all" | ProductCategory;
 
 const filters: Array<{ value: AvailabilityFilter; label: string }> = [
   { value: "all", label: "全部" },
@@ -13,24 +14,34 @@ const filters: Array<{ value: AvailabilityFilter; label: string }> = [
   { value: "preorder", label: "預購" },
 ];
 
-export function ProductBrowser({ products }: { products: Product[] }) {
+const categories: Array<{ value: CategoryFilter; label: string }> = [
+  { value: "all", label: "全部男裝" },
+  { value: "tops", label: "上衣" },
+  { value: "bottoms", label: "下著" },
+  { value: "outerwear", label: "外套" },
+  { value: "accessories", label: "配件" },
+];
+
+export function ProductBrowser({ products, initialCategory = "all" }: { products: Product[]; initialCategory?: CategoryFilter }) {
   const [query, setQuery] = useState("");
   const [availability, setAvailability] = useState<AvailabilityFilter>("all");
+  const [category, setCategory] = useState<CategoryFilter>(initialCategory);
   const [sort, setSort] = useState("newest");
 
   const visibleProducts = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return products
       .filter((product) => availability === "all" || product.availability === availability)
+      .filter((product) => category === "all" || product.category === category)
       .filter((product) => !normalizedQuery || `${product.name} ${product.description}`.toLowerCase().includes(normalizedQuery))
       .sort((a, b) => {
         if (sort === "price-asc") return a.price - b.price;
         if (sort === "price-desc") return b.price - a.price;
         return products.indexOf(a) - products.indexOf(b);
       });
-  }, [availability, products, query, sort]);
+  }, [availability, category, products, query, sort]);
 
-  const hasFilters = Boolean(query.trim()) || availability !== "all";
+  const hasFilters = Boolean(query.trim()) || availability !== "all" || category !== "all";
 
   return <>
     <div className={styles.browser}>
@@ -40,8 +51,13 @@ export function ProductBrowser({ products }: { products: Product[] }) {
         <input className="input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜尋商品" />
       </label>
       <div className={styles.toolbar}>
-        <div className={styles.filterGroup} role="group" aria-label="商品狀態篩選">
+        <div className={styles.filterRows}>
+          <div className={styles.filterGroup} role="group" aria-label="商品類別篩選">
+            {categories.map((filter) => <button className={`${styles.filter} ${category === filter.value ? styles.filterSelected : ""}`} type="button" key={filter.value} aria-pressed={category === filter.value} onClick={() => setCategory(filter.value)}>{filter.label}</button>)}
+          </div>
+          <div className={styles.filterGroup} role="group" aria-label="商品狀態篩選">
           {filters.map((filter) => <button className={`${styles.filter} ${availability === filter.value ? styles.filterSelected : ""}`} type="button" key={filter.value} aria-pressed={availability === filter.value} onClick={() => setAvailability(filter.value)}>{filter.label}</button>)}
+          </div>
         </div>
         <label className={styles.sort}>
           <span>排序</span>
@@ -55,10 +71,10 @@ export function ProductBrowser({ products }: { products: Product[] }) {
     </div>
     <div className={styles.resultMeta} aria-live="polite">
       <span>{visibleProducts.length} 件商品</span>
-      {hasFilters && <button type="button" onClick={() => { setQuery(""); setAvailability("all"); }}>清除條件</button>}
+      {hasFilters && <button type="button" onClick={() => { setQuery(""); setAvailability("all"); setCategory("all"); }}>清除條件</button>}
     </div>
     {visibleProducts.length > 0
       ? <div className={styles.grid}>{visibleProducts.map((product) => <ProductCard key={product.id} product={product} />)}</div>
-      : <div className={styles.empty}><strong>找不到符合條件的選品</strong><p>換個關鍵字或清除篩選，再試一次。</p><button className="button button-secondary" type="button" onClick={() => { setQuery(""); setAvailability("all"); }}>清除條件</button></div>}
+      : <div className={styles.empty}><strong>找不到符合條件的選品</strong><p>換個關鍵字或清除篩選，再試一次。</p><button className="button button-secondary" type="button" onClick={() => { setQuery(""); setAvailability("all"); setCategory("all"); }}>清除條件</button></div>}
   </>;
 }

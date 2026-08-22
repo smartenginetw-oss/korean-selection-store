@@ -4,9 +4,10 @@
 
 insert into public.categories (name, slug, description, sort_order, is_active)
 values
-  ('女裝', 'women', '適合日常穿著的韓系女裝。', 1, true),
-  ('飾品與包款', 'accessories', '輕巧、耐看的日常配件。', 2, true),
-  ('生活選物', 'lifestyle', '讓生活更舒服的小物。', 3, true)
+  ('上衣', 'tops', '針織、襯衫與日常上衣。', 1, true),
+  ('下著', 'bottoms', '適合日常穿著的韓系男裝下著。', 2, true),
+  ('外套與層次', 'outerwear', '為日常輪廓增加層次的外套。', 3, true),
+  ('配件與包款', 'accessories', '輕巧、耐看的日常配件。', 4, true)
 on conflict (slug) do update
 set name = excluded.name,
     description = excluded.description,
@@ -18,7 +19,7 @@ values
   ('柔霧 Oversize 針織上衣', 'soft-oversize-knit', '選用柔軟細緻的針織面料，帶有恰好的寬鬆輪廓。單穿或作為秋冬層次都自然耐看。', 1080, 890, 'active', array['new'], now()),
   ('日常柔光落肩襯衫', 'daily-soft-shirt', '俐落但不緊繃的落肩版型，適合日常通勤與週末穿搭。', null, 1080, 'active', array['new'], now()),
   ('半月柔革肩背包', 'half-moon-bag', '輕巧弧形包身與霧面質感，容量足以收納每日隨身用品。', null, 1290, 'active', array[]::text[], now()),
-  ('靜謐細褶長裙', 'calm-pleated-skirt', '垂墜細褶隨步伐自然展開，鬆緊腰頭讓日常穿著更自在。', null, 1180, 'active', array[]::text[], now())
+  ('靜謐細褶寬褲', 'calm-pleated-trousers', '垂墜細褶隨步伐自然展開，鬆緊腰頭讓日常穿著更自在。', null, 1180, 'active', array[]::text[], now())
 on conflict (slug) do update
 set name = excluded.name,
     description = excluded.description,
@@ -31,9 +32,9 @@ set name = excluded.name,
 insert into public.product_categories (product_id, category_id, is_primary)
 select p.id, c.id, true
 from (values
-  ('soft-oversize-knit', 'women'),
-  ('daily-soft-shirt', 'women'),
-  ('calm-pleated-skirt', 'women'),
+  ('soft-oversize-knit', 'tops'),
+  ('daily-soft-shirt', 'tops'),
+  ('calm-pleated-trousers', 'bottoms'),
   ('half-moon-bag', 'accessories')
 ) as seed(product_slug, category_slug)
 join public.products p on p.slug = seed.product_slug
@@ -46,7 +47,7 @@ from (values
   ('soft-oversize-knit', '顏色', 1), ('soft-oversize-knit', '尺寸', 2),
   ('daily-soft-shirt', '顏色', 1), ('daily-soft-shirt', '尺寸', 2),
   ('half-moon-bag', '顏色', 1), ('half-moon-bag', '尺寸', 2),
-  ('calm-pleated-skirt', '顏色', 1), ('calm-pleated-skirt', '尺寸', 2)
+  ('calm-pleated-trousers', '顏色', 1), ('calm-pleated-trousers', '尺寸', 2)
 ) as seed(product_slug, option_name, position)
 join public.products p on p.slug = seed.product_slug
 on conflict (product_id, name) do update set position = excluded.position;
@@ -60,8 +61,8 @@ from (values
   ('daily-soft-shirt', '尺寸', 'Free', 1),
   ('half-moon-bag', '顏色', '燕麥', 1), ('half-moon-bag', '顏色', '深棕', 2),
   ('half-moon-bag', '尺寸', 'Free', 1),
-  ('calm-pleated-skirt', '顏色', '暖灰', 1), ('calm-pleated-skirt', '顏色', '霧黑', 2),
-  ('calm-pleated-skirt', '尺寸', 'S', 1), ('calm-pleated-skirt', '尺寸', 'M', 2)
+  ('calm-pleated-trousers', '顏色', '暖灰', 1), ('calm-pleated-trousers', '顏色', '霧黑', 2),
+  ('calm-pleated-trousers', '尺寸', 'S', 1), ('calm-pleated-trousers', '尺寸', 'M', 2)
 ) as seed(product_slug, option_name, option_value, position)
 join public.products p on p.slug = seed.product_slug
 join public.product_options po on po.product_id = p.id and po.name = seed.option_name
@@ -88,10 +89,10 @@ begin
       ('daily-soft-shirt', 'SHIRT-SAGE-F', '鼠尾草', 'Free', 'in_stock', null::date, 3),
       ('half-moon-bag', 'BAG-OAT-F', '燕麥', 'Free', 'preorder', '2026-09-25'::date, 20),
       ('half-moon-bag', 'BAG-BROWN-F', '深棕', 'Free', 'preorder', '2026-09-25'::date, 20),
-      ('calm-pleated-skirt', 'SKIRT-GREY-S', '暖灰', 'S', 'in_stock', null::date, 3),
-      ('calm-pleated-skirt', 'SKIRT-GREY-M', '暖灰', 'M', 'in_stock', null::date, 3),
-      ('calm-pleated-skirt', 'SKIRT-BLACK-S', '霧黑', 'S', 'in_stock', null::date, 3),
-      ('calm-pleated-skirt', 'SKIRT-BLACK-M', '霧黑', 'M', 'in_stock', null::date, 3)
+      ('calm-pleated-trousers', 'TROUSERS-GREY-S', '暖灰', 'S', 'in_stock', null::date, 3),
+      ('calm-pleated-trousers', 'TROUSERS-GREY-M', '暖灰', 'M', 'in_stock', null::date, 3),
+      ('calm-pleated-trousers', 'TROUSERS-BLACK-S', '霧黑', 'S', 'in_stock', null::date, 3),
+      ('calm-pleated-trousers', 'TROUSERS-BLACK-M', '霧黑', 'M', 'in_stock', null::date, 3)
     ) as variants(product_slug, sku, color_value, size_value, fulfillment_mode, preorder_available_at, on_hand)
   loop
     select id into v_product_id from public.products where slug = seed.product_slug;

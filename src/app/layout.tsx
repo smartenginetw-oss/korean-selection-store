@@ -3,8 +3,8 @@ import "./globals.css";
 import { CartProvider } from "@/features/cart/cart-provider";
 
 export const metadata: Metadata = {
-  title: { default: "MORII 韓國選品", template: "%s｜MORII" },
-  description: "把韓國日常裡的溫柔質感，選進你的生活。",
+  title: { default: "GYEOT｜韓國男裝", template: "%s｜GYEOT" },
+  description: "陪你穿進日常的韓國男裝選品。",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

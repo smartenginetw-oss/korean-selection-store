@@ -7,6 +7,7 @@
 .search svg { position: absolute; z-index: 1; top: 50%; left: 15px; width: 20px; height: 20px; color: var(--color-text-secondary); transform: translateY(-50%); pointer-events: none; }
 .search input { min-height: 54px; padding-left: 46px; border-radius: var(--radius-pill); }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.filterRows { display: grid; gap: 7px; min-width: 0; }
 .filterGroup { display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; }
 .filterGroup::-webkit-scrollbar { display: none; }
 .filter { min-height: 42px; padding: 8px 16px; border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: transparent; color: var(--color-text-secondary); cursor: pointer; white-space: nowrap; }

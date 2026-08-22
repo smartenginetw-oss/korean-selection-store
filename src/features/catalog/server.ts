@@ -1,6 +1,6 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/types/database";
-import { products as mockProducts, type Product, type ProductOptionGroup, type ProductVariant } from "./data";
+import { products as mockProducts, type Product, type ProductCategory, type ProductOptionGroup, type ProductVariant } from "./data";
 
 type ProductRow = Pick<
   Tables<"products">,
@@ -18,8 +18,21 @@ const PALETTES: Record<string, [string, string]> = {
   "soft-oversize-knit": ["#d8c5ae", "#9a8a79"],
   "daily-soft-shirt": ["#ddd6ca", "#adb3aa"],
   "half-moon-bag": ["#b4a294", "#756b63"],
-  "calm-pleated-skirt": ["#b8b1a8", "#77716c"],
+  "calm-pleated-trousers": ["#b8b1a8", "#77716c"],
 };
+
+const CATEGORY_BY_SLUG: Record<string, ProductCategory> = {
+  "soft-oversize-knit": "tops",
+  "daily-soft-shirt": "tops",
+  "half-moon-bag": "accessories",
+  "calm-pleated-skirt": "bottoms",
+  "calm-pleated-trousers": "bottoms",
+};
+
+function mapCategory(row: ProductRow): ProductCategory {
+  const taggedCategory = row.tags.find((tag): tag is ProductCategory => ["tops", "bottoms", "outerwear", "accessories"].includes(tag));
+  return taggedCategory ?? CATEGORY_BY_SLUG[row.slug] ?? "tops";
+}
 
 function getPublicClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -86,6 +99,7 @@ function mapProduct(
     colors,
     sizes,
     description: row.description,
+    category: mapCategory(row),
     optionGroups,
     variants,
   };

@@ -11,9 +11,14 @@ export type Product = {
   colors: string[];
   sizes: string[];
   description: string;
+  category: ProductCategory;
   optionGroups?: ProductOptionGroup[];
   variants?: ProductVariant[];
 };
+
+export type ProductCategory = "tops" | "bottoms" | "outerwear" | "accessories";
+
+export const productCategories: ProductCategory[] = ["tops", "bottoms", "outerwear", "accessories"];
 
 export type ProductOptionGroup = {
   name: string;
@@ -42,6 +47,7 @@ export const products: Product[] = [
     colors: ["奶茶", "灰色"],
     sizes: ["S", "M", "L"],
     description: "選用柔軟細緻的針織面料，帶有恰好的寬鬆輪廓。單穿或作為秋冬層次都自然耐看。",
+    category: "tops",
   },
   {
     id: "prod-shirt-02",
@@ -54,6 +60,7 @@ export const products: Product[] = [
     colors: ["暖白", "鼠尾草"],
     sizes: ["Free"],
     description: "俐落但不緊繃的落肩版型，適合日常通勤與週末穿搭。",
+    category: "tops",
   },
   {
     id: "prod-bag-03",
@@ -66,17 +73,19 @@ export const products: Product[] = [
     colors: ["燕麥", "深棕"],
     sizes: ["Free"],
     description: "輕巧弧形包身與霧面質感，容量足以收納每日隨身用品。",
+    category: "accessories",
   },
   {
-    id: "prod-skirt-04",
-    slug: "calm-pleated-skirt",
-    name: "靜謐細褶長裙",
+    id: "prod-trousers-04",
+    slug: "calm-pleated-trousers",
+    name: "靜謐細褶寬褲",
     price: 1180,
     availability: "in_stock",
     palette: ["#b8b1a8", "#77716c"],
     colors: ["暖灰", "霧黑"],
     sizes: ["S", "M"],
     description: "垂墜細褶隨步伐自然展開，鬆緊腰頭讓日常穿著更自在。",
+    category: "bottoms",
   },
 ];
 
