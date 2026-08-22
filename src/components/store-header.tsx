@@ -7,6 +7,7 @@ import styles from "./store-header.module.css";
 
 const navigation = [
   ["NEW", "/products?sort=newest"],
+  ["ALL", "/products"],
   ["WOMEN", "/products?category=women"],
   ["MEN", "/products?category=men"],
   ["ACCESSORIES", "/products?category=accessories"],
@@ -43,8 +44,15 @@ export function StoreHeader() {
         </div>
       </div>
       {open && <nav id="mobile-navigation" className={styles.mobileNav} aria-label="手機導覽">
-        {navigation.map(([label, href]) => <Link key={label} href={href} onClick={() => setOpen(false)}>{label}</Link>)}
-        <Link href="/about" onClick={() => setOpen(false)}>ABOUT</Link>
+        <div className={styles.mobileNavGroup}>
+          <span className={styles.mobileNavTitle}>探索選品</span>
+          {navigation.map(([label, href]) => <Link className={styles.mobileNavLink} key={label} href={href} onClick={() => setOpen(false)}>{label}</Link>)}
+        </div>
+        <div className={styles.mobileNavGroup}>
+          <span className={styles.mobileNavTitle}>品牌資訊</span>
+          <Link className={styles.mobileNavLink} href="/about" onClick={() => setOpen(false)}>ABOUT</Link>
+          <Link className={styles.mobileNavLink} href="/shopping-guide" onClick={() => setOpen(false)}>購物說明</Link>
+        </div>
       </nav>}
     </header>
   );
