@@ -14,7 +14,7 @@ export default async function HomePage() {
   return <>
     <section className={styles.hero}>
       <div className={`container ${styles.heroInner}`}>
-        <div className={styles.heroCopy}><span className="eyebrow">Korean mood, selected slowly</span><h1 className="serif">韓國日常，<br />溫柔選進生活。</h1><p>從首爾巷弄到日常衣櫥，挑選不喧嘩、能長久陪伴你的質感單品。</p><Link className="button button-primary" href="/products">探索本週新品</Link></div>
+        <div className={styles.heroCopy}><span className="eyebrow">Korean mood, selected slowly</span><h1 className="serif">韓國日常<br />溫柔選進生活。</h1><p>從首爾巷弄到日常衣櫥，挑選不喧嘩、能長久陪伴你的質感單品。</p><Link className="button button-primary" href="/products">探索本週新品</Link></div>
         <div className={styles.heroArt} aria-label="韓系選品形象示意圖" role="img"><div className={styles.arch} /><div className={styles.heroLabel}>SEOUL · TAIPEI<br />CURATED 2026</div></div>
       </div>
     </section>
