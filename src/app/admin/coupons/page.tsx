@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/auth";
 import { formatTwd } from "@/lib/money";
 import { createCouponAction, toggleCouponAction } from "./actions";
+import { CouponDatePicker } from "./coupon-date-picker";
 import styles from "./coupons.module.css";
 import adminStyles from "../admin.module.css";
 
@@ -23,7 +24,7 @@ export default async function AdminCouponsPage({ searchParams }: { searchParams:
     {params.status === "error" && <div className={styles.error}>{params.message ?? "操作尚未完成，請稍後再試。"}</div>}
     <div className={styles.grid}>
       <section className={adminStyles.panel}><h2>建立優惠碼</h2><p className={adminStyles.panelIntro}>V1 支援固定金額或百分比折扣，可設定最低消費、使用次數與有效期間。</p><form action={createCouponAction} className={styles.form}>
-        <div className={styles.formGrid}><label>代碼<input className="input" name="code" required maxLength={40} placeholder="GYEOT10" /></label><label>折扣類型<select className="input" name="discountType" defaultValue="percent"><option value="percent">百分比折扣</option><option value="fixed">固定金額（TWD）</option></select></label><label>折扣數值<input className="input" name="discountValue" type="number" min="1" max="1000000" required defaultValue="10" /></label><label>最低消費（TWD）<input className="input" name="minimumSubtotal" type="number" min="0" max="1000000" defaultValue="0" /></label><label>使用次數上限（選填）<input className="input" name="usageLimit" type="number" min="1" max="1000000" placeholder="不限次數" /></label><label>開始時間（選填）<input className="input" name="startsAt" type="datetime-local" /></label><label>結束時間（選填）<input className="input" name="endsAt" type="datetime-local" /></label></div>
+        <div className={styles.formGrid}><label>代碼<input className="input" name="code" required maxLength={40} placeholder="GYEOT10" /></label><label>折扣類型<select className="input" name="discountType" defaultValue="percent"><option value="percent">百分比折扣</option><option value="fixed">固定金額（TWD）</option></select></label><label>折扣數值<input className="input" name="discountValue" type="number" min="1" max="1000000" required defaultValue="10" /></label><label>最低消費（TWD）<input className="input" name="minimumSubtotal" type="number" min="0" max="1000000" defaultValue="0" /></label><label>使用次數上限（選填）<input className="input" name="usageLimit" type="number" min="1" max="1000000" placeholder="不限次數" /></label><label>開始時間（選填）<CouponDatePicker name="startsAt" label="開始時間" /></label><label>結束時間（選填）<CouponDatePicker name="endsAt" label="結束時間" /></label></div>
         <button className="button button-primary" type="submit">建立並啟用</button>
       </form></section>
       <section className={adminStyles.panel}><h2>使用規則</h2><ul className={styles.rules}><li>優惠碼會在結帳交易內鎖定並驗證，前端不能自行改價。</li><li>同一張訂單只套用一組優惠碼，折扣不會超過商品小計。</li><li>使用次數在訂單成功建立時累計，失敗交易會自動回滾。</li></ul></section>
