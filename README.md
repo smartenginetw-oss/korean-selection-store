@@ -26,3 +26,9 @@ npm run dev
 - `.env.local` 僅存 Supabase URL 與 publishable key，已被 `.gitignore` 排除；service-role key 不放入本機前端設定。
 - 商品頁已改由 Supabase catalog 讀取；`/api/checkout` 優先使用 server-only service role，未設定時改呼叫 `checkout` Edge Function，由 Supabase secrets 執行真正建單。
 - 目前付款仍是測試 adapter，會建立訂單、付款紀錄與 15 分鐘庫存 reservation，不會產生真實扣款。
+
+## 登入入口
+
+- 商城會員登入：`/login`；訪客不需登入即可結帳。
+- 管理員／員工後台登入：`/admin-login`；後台路由 `/admin/*` 仍由 Server-side `admin` 角色保護。
+- 目前員工權限採個別 Supabase Auth 帳號，不共用帳密；V1 的 `admin` 角色是完整後台權限，細分職務權限會在員工流程確定後再加入。

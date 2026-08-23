@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 
-const adminLoginPath = "/login?next=%2Fadmin";
+const adminLoginPath = "/admin-login?next=%2Fadmin";
 
 /**
  * Server-side authorization boundary for every admin page.
