@@ -1,0 +1,13 @@
+.grid { display: grid; gap: 16px; }
+.form { display: grid; gap: 18px; }
+.formGrid { display: grid; gap: 14px; }
+.formGrid label { display: grid; gap: 7px; color: var(--color-text-secondary); font-size: .78rem; }
+.checkbox { display: flex; align-items: flex-start; gap: 10px; padding: 13px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-muted); cursor: pointer; }
+.checkbox input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--color-primary); }
+.checkbox span { display: grid; gap: 4px; }
+.checkbox strong { font-size: .84rem; }
+.checkbox small { color: var(--color-text-secondary); font-size: .72rem; line-height: 1.5; }
+.rules { display: grid; gap: 12px; margin: 0; padding-left: 18px; color: var(--color-text-secondary); font-size: .82rem; line-height: 1.65; }
+.updated { margin: 22px 0 0; padding-top: 14px; border-top: 1px solid var(--color-border); color: var(--color-text-muted); font-size: .72rem; }
+.error { margin-bottom: 18px; padding: 12px 14px; border-radius: var(--radius-md); color: #8b4136; background: color-mix(in srgb, #8b4136 8%, var(--color-surface)); border: 1px solid color-mix(in srgb, #8b4136 30%, var(--color-border)); font-size: .82rem; }
+@media (min-width: 720px) { .grid { grid-template-columns: minmax(0,1.4fr) minmax(260px,.6fr); }.formGrid { grid-template-columns: repeat(2, minmax(0,1fr)); } }

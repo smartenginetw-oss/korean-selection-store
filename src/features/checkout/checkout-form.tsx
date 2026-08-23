@@ -4,9 +4,10 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/features/cart/cart-provider";
 import { formatTwd } from "@/lib/money";
+import type { StoreSettings } from "@/lib/store-settings";
 import styles from "./checkout-form.module.css";
 
-export function CheckoutForm() {
+export function CheckoutForm({ settings }: { settings: Pick<StoreSettings, "shippingFee" | "reservationMinutes"> }) {
   const router = useRouter();
   const { items, clearCart } = useCart();
   const [submitting, setSubmitting] = useState(false);
@@ -17,7 +18,7 @@ export function CheckoutForm() {
   const [couponPreview, setCouponPreview] = useState<{ couponCode: string; discountTotal: number; grandTotal: number } | null>(null);
   const idempotencyKey = useRef<string | null>(null);
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shippingTotal = items.length ? 80 : 0;
+  const shippingTotal = items.length ? settings.shippingFee : 0;
   const total = subtotal - (couponPreview?.discountTotal ?? 0) + shippingTotal;
 
   async function applyCoupon() {
@@ -117,6 +118,6 @@ export function CheckoutForm() {
       <section><span className={styles.number}>4</span><h2 className="serif">優惠碼</h2><div className="field"><label htmlFor="couponCode">優惠碼（選填）</label><div className={styles.couponRow}><input className="input" id="couponCode" name="couponCode" value={couponCode} onChange={(event) => { setCouponCode(event.target.value.toUpperCase()); setCouponPreview(null); setCouponStatus("idle"); setCouponMessage(null); }} maxLength={40} autoCapitalize="characters" placeholder="輸入優惠碼" /><button className="button button-secondary button-small" type="button" onClick={applyCoupon} disabled={couponStatus === "loading" || !items.length}>{couponStatus === "loading" ? "檢查中…" : couponPreview ? "重新套用" : "套用"}</button></div><small className={`${styles.couponMessage} ${couponStatus === "error" ? styles.couponError : couponStatus === "success" ? styles.couponSuccess : ""}`} role={couponStatus === "error" ? "alert" : undefined}>{couponMessage ?? "套用後會在摘要顯示折扣，正式建單時仍由伺服器再次驗證。"}</small></div></section>
       <label className={styles.consent}><input type="checkbox" required />我已閱讀並同意服務條款與退換貨政策</label>
     </div>
-    <aside className={styles.summary}><h2 className="serif">訂單摘要</h2>{items.map((item) => <div className={styles.line} key={item.variantKey}><span>{item.name}<small>{Object.values(item.selectedOptions ?? { 顏色: item.color, 尺寸: item.size }).join("／")} × {item.quantity}</small></span><strong>{formatTwd(item.price * item.quantity)}</strong></div>)}<div className={styles.amount}><span>商品小計</span><strong>{formatTwd(subtotal)}</strong></div>{couponPreview && <div className={`${styles.amount} ${styles.discount}`}><span>優惠折扣<small>{couponPreview.couponCode}</small></span><strong>−{formatTwd(couponPreview.discountTotal)}</strong></div>}<div className={styles.amount}><span>宅配運費</span><strong>{formatTwd(shippingTotal)}</strong></div><div className={`${styles.amount} ${styles.total}`}><span>總計</span><strong>{formatTwd(total)}</strong></div><button className="button button-primary" type="submit" disabled={submitting || !items.length}>{submitting ? "建立訂單中…" : "確認測試訂單"}</button><p>測試付款會由 Server 驗證價格並保留庫存 15 分鐘，不會產生真實扣款。</p></aside>
+    <aside className={styles.summary}><h2 className="serif">訂單摘要</h2>{items.map((item) => <div className={styles.line} key={item.variantKey}><span>{item.name}<small>{Object.values(item.selectedOptions ?? { 顏色: item.color, 尺寸: item.size }).join("／")} × {item.quantity}</small></span><strong>{formatTwd(item.price * item.quantity)}</strong></div>)}<div className={styles.amount}><span>商品小計</span><strong>{formatTwd(subtotal)}</strong></div>{couponPreview && <div className={`${styles.amount} ${styles.discount}`}><span>優惠折扣<small>{couponPreview.couponCode}</small></span><strong>−{formatTwd(couponPreview.discountTotal)}</strong></div>}<div className={styles.amount}><span>宅配運費</span><strong>{formatTwd(shippingTotal)}</strong></div><div className={`${styles.amount} ${styles.total}`}><span>總計</span><strong>{formatTwd(total)}</strong></div><button className="button button-primary" type="submit" disabled={submitting || !items.length}>{submitting ? "建立訂單中…" : "確認測試訂單"}</button><p>測試付款會由 Server 驗證價格並保留庫存 {settings.reservationMinutes} 分鐘，不會產生真實扣款。</p></aside>
   </form>;
 }

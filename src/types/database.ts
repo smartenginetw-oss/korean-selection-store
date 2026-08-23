@@ -1011,6 +1011,39 @@ export type Database = {
         }
         Relationships: []
       }
+      store_settings: {
+        Row: {
+          brand_name: string
+          preorder_enabled: boolean
+          reservation_minutes: number
+          shipping_fee: number
+          support_email: string
+          updated_at: string
+          updated_by: string | null
+          id: boolean
+        }
+        Insert: {
+          brand_name?: string
+          preorder_enabled?: boolean
+          reservation_minutes?: number
+          shipping_fee?: number
+          support_email?: string
+          updated_at?: string
+          updated_by?: string | null
+          id?: boolean
+        }
+        Update: {
+          brand_name?: string
+          preorder_enabled?: boolean
+          reservation_minutes?: number
+          shipping_fee?: number
+          support_email?: string
+          updated_at?: string
+          updated_by?: string | null
+          id?: boolean
+        }
+        Relationships: []
+      }
       shipments: {
         Row: {
           carrier: string
@@ -1136,6 +1169,10 @@ export type Database = {
       }
       preview_coupon_discount: {
         Args: { p_payload: Json }
+        Returns: Json
+      }
+      get_store_settings: {
+        Args: Record<string, never>
         Returns: Json
       }
     }

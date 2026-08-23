@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getStoreSettings } from "@/lib/store-settings";
 import styles from "./info.module.css";
 
 const pages: Record<string, { title: string; body: string }> = {
@@ -11,4 +12,4 @@ const pages: Record<string, { title: string; body: string }> = {
   terms: { title: "服務條款", body: "此頁目前是路由骨架；正式文字必須經法務審閱。" },
 };
 
-export default async function InfoPage({ params }: { params: Promise<{ info: string }> }) { const { info } = await params; const page = pages[info]; if (!page) notFound(); return <article className={`container ${styles.page}`}><div className="eyebrow">GYEOT guide</div><h1 className="serif">{page.title}</h1><p>{page.body}</p><div className={styles.placeholder}>內容待正式營運資料確認</div></article>; }
+export default async function InfoPage({ params }: { params: Promise<{ info: string }> }) { const { info } = await params; const page = pages[info]; if (!page) notFound(); const settings = await getStoreSettings(); const body = info === "contact" ? `客服 Email：${settings.supportEmail}` : info === "shipping" ? `第一階段僅提供台灣宅配，運費為 NT$${settings.shippingFee}。` : page.body; return <article className={`container ${styles.page}`}><div className="eyebrow">GYEOT guide</div><h1 className="serif">{page.title}</h1><p>{body}</p><div className={styles.placeholder}>內容待正式營運資料確認</div></article>; }

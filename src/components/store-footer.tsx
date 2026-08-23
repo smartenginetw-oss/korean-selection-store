@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BrandLockup } from "@/components/brand-lockup";
+import type { StoreSettings } from "@/lib/store-settings";
 import styles from "./store-footer.module.css";
 
 const shopLinks = [
@@ -19,7 +20,7 @@ const memberLinks = [
   ["退換貨政策", "/returns"],
 ] as const;
 
-export function StoreFooter() {
+export function StoreFooter({ settings }: { settings: Pick<StoreSettings, "brandName" | "supportEmail"> }) {
   return <footer className={styles.footer}>
     <div className={`container ${styles.inner}`}>
       <div className={styles.intro}>
@@ -38,6 +39,7 @@ export function StoreFooter() {
             <Link href="/contact">聯絡我們</Link>
             <Link href="/privacy">隱私權政策</Link>
             <Link href="/terms">服務條款</Link>
+            <a href={`mailto:${settings.supportEmail}`}>{settings.supportEmail}</a>
           </div>
         </div>
       </div>
@@ -48,7 +50,7 @@ export function StoreFooter() {
       </div>
 
       <div className={styles.bottom}>
-        <span>GYEOT 곁 · 2026</span>
+        <span>{settings.brandName} 곁 · 2026</span>
         <span>台灣限定宅配 · TWD</span>
       </div>
     </div>
