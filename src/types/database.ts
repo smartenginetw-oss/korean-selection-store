@@ -1056,6 +1056,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_admin_product: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
       create_checkout_order: {
         Args: { p_idempotency_key: string; p_payload: Json }
         Returns: Json
@@ -1192,4 +1196,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

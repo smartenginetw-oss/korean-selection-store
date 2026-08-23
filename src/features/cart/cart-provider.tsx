@@ -27,7 +27,8 @@ type CartContextValue = {
   clearCart: () => void;
 };
 
-const STORAGE_KEY = "morii-demo-cart-v1";
+const STORAGE_KEY = "gyeot-cart-v1";
+const LEGACY_STORAGE_KEY = "morii-demo-cart-v1";
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -37,7 +38,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try {
-        const saved = window.localStorage.getItem(STORAGE_KEY);
+        const saved = window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
         if (saved) setItems(JSON.parse(saved) as CartItem[]);
       } catch {
         window.localStorage.removeItem(STORAGE_KEY);
