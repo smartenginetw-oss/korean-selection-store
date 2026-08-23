@@ -1,0 +1,5 @@
+.button { display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--color-border); border-radius: 50%; color: var(--color-primary); background: rgb(255 253 250 / 92%); box-shadow: var(--shadow-sm); cursor: pointer; transition: transform 180ms ease, background-color 180ms ease, color 180ms ease; }
+.button:hover:not(:disabled) { transform: translateY(-1px); background: var(--color-primary); color: white; }
+.button:disabled { cursor: wait; opacity: .65; }
+.button svg { width: 19px; height: 19px; }
+.compact { position: absolute; z-index: 2; top: 10px; right: 10px; }
