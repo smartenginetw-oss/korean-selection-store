@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireOwner } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
 const SettingsSchema = z.object({
@@ -22,7 +22,7 @@ function settingsRedirect(status: "updated" | "error", message?: string): never 
 }
 
 export async function updateStoreSettingsAction(formData: FormData) {
-  const { user } = await requireAdmin();
+  const { user } = await requireOwner();
   const parsed = SettingsSchema.safeParse({
     brandName: formData.get("brandName"),
     supportEmail: formData.get("supportEmail"),
@@ -54,4 +54,3 @@ export async function updateStoreSettingsAction(formData: FormData) {
   revalidatePath("/products");
   settingsRedirect("updated");
 }
-

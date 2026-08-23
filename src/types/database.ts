@@ -1202,6 +1202,14 @@ export type Database = {
         Args: Record<string, never>
         Returns: Json
       }
+      list_backoffice_users: {
+        Args: Record<string, never>
+        Returns: Json
+      }
+      set_staff_member: {
+        Args: { p_email: string; p_role: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

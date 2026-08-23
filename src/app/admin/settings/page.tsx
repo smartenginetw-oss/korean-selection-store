@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireOwner } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_STORE_SETTINGS } from "@/lib/store-settings";
 import adminStyles from "../admin.module.css";
@@ -8,7 +8,7 @@ import styles from "./settings.module.css";
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage({ searchParams }: { searchParams: Promise<{ status?: string; message?: string }> }) {
-  await requireAdmin();
+  await requireOwner();
   const params = await searchParams;
   const supabase = await createClient();
   const { data, error } = await supabase.from("store_settings").select("brand_name,support_email,shipping_fee,reservation_minutes,preorder_enabled,updated_at").eq("id", true).maybeSingle();
@@ -35,4 +35,3 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
     </div>
   </>;
 }
-

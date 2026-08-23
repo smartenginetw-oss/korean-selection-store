@@ -39,14 +39,14 @@ export function AuthLoginForm({ audience, nextPath }: { audience: Audience; next
       .eq("user_id", data.user.id)
       .maybeSingle();
 
-    if (isAdmin && role?.role !== "admin") {
+    if (isAdmin && role?.role !== "admin" && role?.role !== "staff") {
       await supabase.auth.signOut();
-      setErrorMessage("這個帳號沒有後台權限，請使用老闆帳號登入。");
+      setErrorMessage("這個帳號沒有後台權限，請聯絡老闆授權。");
       setPending(false);
       return;
     }
 
-    if (!isAdmin && role?.role === "admin") {
+    if (!isAdmin && (role?.role === "admin" || role?.role === "staff")) {
       await supabase.auth.signOut();
       setErrorMessage("這是老闆帳號，請改由後台登入入口進入。");
       setPending(false);

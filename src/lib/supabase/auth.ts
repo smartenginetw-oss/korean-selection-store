@@ -23,9 +23,15 @@ export async function requireAdmin() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (error || role?.role !== "admin") {
+  if (error || (role?.role !== "admin" && role?.role !== "staff")) {
     redirect("/?notice=admin_only");
   }
 
-  return { user };
+  return { user, role: role.role as "admin" | "staff" };
+}
+
+export async function requireOwner() {
+  const result = await requireAdmin();
+  if (result.role !== "admin") redirect("/admin?notice=owner_only");
+  return result;
 }

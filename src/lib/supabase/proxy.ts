@@ -55,7 +55,7 @@ export async function updateSession(request: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (role?.role !== "admin") {
+    if (role?.role !== "admin" && role?.role !== "staff") {
       const url = request.nextUrl.clone();
       url.pathname = "/";
       url.search = "?notice=admin_only";
