@@ -1,5 +1,6 @@
 import { formatTwd } from "@/lib/money";
 import { getAdminReports, type ReportGranularity } from "@/features/reports/admin/server";
+import { ReportFilters } from "./report-filters";
 import styles from "./reports.module.css";
 import adminStyles from "../admin.module.css";
 
@@ -14,12 +15,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams?
     <div className={adminStyles.titleRow}><div><div className="eyebrow">Reports · Flexible period</div><h1 className="serif">報表分析</h1></div>{report && <span className={styles.period}>{report.periodLabel} · {granularityLabel[report.granularity]}</span>}</div>
     {error && <div className={adminStyles.notice}>{error}</div>}
     {report && <>
-      <form className={styles.filters} method="get">
-        <div className={styles.filterField}><label htmlFor="report-start">起始日期</label><input className="input" id="report-start" name="start" type="date" defaultValue={report.startDate} /></div>
-        <div className={styles.filterField}><label htmlFor="report-end">結束日期</label><input className="input" id="report-end" name="end" type="date" defaultValue={report.endDate} /></div>
-        <div className={styles.filterField}><label htmlFor="report-granularity">統計粒度</label><select className="input" id="report-granularity" name="granularity" defaultValue={report.granularity}><option value="day">每日</option><option value="month">每月</option><option value="year">每年</option></select></div>
-        <button className="button button-primary button-small" type="submit">更新報表</button><span className={styles.filterHint}>最多查詢 10 年</span>
-      </form>
+      <ReportFilters startDate={report.startDate} endDate={report.endDate} granularity={report.granularity} />
       <section className={styles.metricGrid} aria-label="營運摘要">
         <div className={styles.metric}><span>有效訂單</span><strong>{report.metrics.orderCount}</strong><small>近 30 天</small></div>
         <div className={styles.metric}><span>已付款訂單</span><strong>{report.metrics.paidOrderCount}</strong><small>不含取消</small></div>

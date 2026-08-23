@@ -14,6 +14,28 @@
 .panelHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
 .panelHeading h2 { margin: 0; font-size: 1.05rem; }
 .panelHeading span { color: var(--color-text-muted); font-size: .72rem; }
+.datePicker { position: relative; }
+.dateButton { width: 100%; min-height: 42px; padding: 9px 12px 9px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--color-border); border-radius: 14px; background: #fffdfa; color: var(--color-text-primary); cursor: pointer; text-align: left; transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
+.dateButton:hover, .dateButton:focus-visible { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgb(120 97 88 / 12%); }
+.dateButton:active { transform: scale(.99); }
+.dateButton svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--color-primary); }
+.calendar { position: absolute; z-index: 20; top: calc(100% + 8px); left: 0; width: 286px; padding: 14px; border: 1px solid var(--color-border); border-radius: 20px; background: #fffdfa; box-shadow: 0 18px 45px rgb(48 43 40 / 18%); animation: calendar-in 160ms ease-out; }
+.calendarHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.calendarHeader strong { color: var(--color-text-primary); font-size: .88rem; }
+.calendarHeader button, .todayButton { border: 0; background: transparent; color: var(--color-primary); cursor: pointer; }
+.calendarHeader button { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font-size: 1.1rem; }
+.calendarHeader button:hover { background: var(--color-surface-muted); }
+.weekdays, .calendarGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.weekdays { margin-bottom: 4px; color: var(--color-text-muted); font-size: .68rem; }
+.day { min-width: 0; aspect-ratio: 1; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--color-text-primary); cursor: pointer; font-size: .75rem; }
+.day:hover { background: var(--color-surface-muted); }
+.dayOutside { color: #b8b0a9; }
+.dayToday { box-shadow: inset 0 0 0 1px var(--color-primary); color: var(--color-primary); font-weight: 700; }
+.daySelected { background: var(--color-primary); color: white; box-shadow: none; font-weight: 700; }
+.daySelected:hover { background: var(--color-primary-hover); }
+.todayButton { display: block; margin: 10px 0 0 auto; padding: 5px 8px; border-radius: 999px; font-size: .73rem; }
+.todayButton:hover { background: var(--color-surface-muted); }
+@keyframes calendar-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .chart { display: grid; grid-template-columns: repeat(auto-fit, minmax(24px, 1fr)); align-items: end; gap: 8px; min-height: 188px; overflow-x: auto; padding-top: 12px; }
 .barItem { display: grid; grid-template-rows: 156px auto; min-width: 22px; gap: 9px; align-items: end; text-align: center; }
 .barTrack { display: flex; height: 100%; align-items: end; justify-content: center; }
@@ -33,3 +55,4 @@
 .productRow b { font-size: .82rem; font-variant-numeric: tabular-nums; }
 .rank { color: var(--color-text-muted); font-family: Georgia, serif; font-size: .75rem; }
 @media (min-width: 720px) { .metricGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }.split { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }.split .panel { min-width: 0; } }
+@media (max-width: 560px) { .calendar { right: 0; left: auto; width: min(286px, calc(100vw - 48px)); } }
