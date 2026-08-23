@@ -26,6 +26,12 @@ type CheckoutPayload = {
   items: Array<{ variantId: string; quantity: number }>;
 };
 
+type PreviewPayload = {
+  action: "preview";
+  couponCode: string;
+  items: Array<{ variantId: string; quantity: number }>;
+};
+
 const headers = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 
 function json(data: unknown, status = 200) {
@@ -89,6 +95,16 @@ function validatePayload(value: unknown): value is CheckoutPayload {
   });
 }
 
+function validatePreviewPayload(value: unknown): value is PreviewPayload {
+  if (!isRecord(value) || value.action !== "preview") return false;
+  if (typeof value.couponCode !== "string" || value.couponCode.trim().length < 1 || value.couponCode.trim().length > 40) return false;
+  if (!Array.isArray(value.items) || value.items.length < 1 || value.items.length > 50) return false;
+  return value.items.every((item) => {
+    if (!isRecord(item) || typeof item.variantId !== "string" || !UUID.test(item.variantId)) return false;
+    return typeof item.quantity === "number" && Number.isInteger(item.quantity) && item.quantity >= 1 && item.quantity <= 10;
+  });
+}
+
 function databaseKey(): { key: string; isNewSecret: boolean } | null {
   const secretKeys = Deno.env.get("SUPABASE_SECRET_KEYS");
   if (secretKeys) {
@@ -143,6 +159,37 @@ async function invokeCheckout(payload: CheckoutPayload) {
   return json({ order: body });
 }
 
+async function invokeCouponPreview(payload: PreviewPayload) {
+  const baseUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "");
+  const secret = databaseKey();
+  if (!baseUrl || !secret) return errorResponse("優惠碼服務尚未設定安全金鑰。", 503, "preview_not_configured");
+
+  const requestHeaders: Record<string, string> = { "content-type": "application/json", apikey: secret.key };
+  if (!secret.isNewSecret) requestHeaders.authorization = `Bearer ${secret.key}`;
+  const response = await fetch(`${baseUrl}/rest/v1/rpc/preview_coupon_discount`, {
+    method: "POST",
+    headers: requestHeaders,
+    body: JSON.stringify({ p_payload: { couponCode: payload.couponCode, items: payload.items } }),
+  });
+
+  let body: unknown = null;
+  try {
+    body = await response.json();
+  } catch {
+    return errorResponse("目前無法檢查優惠碼，請稍後再試。", 502, "preview_unavailable");
+  }
+  if (!response.ok) {
+    const dbError = isRecord(body) ? body : {};
+    const code = typeof dbError.code === "string" ? dbError.code : undefined;
+    if (code === "P0001") return errorResponse("商品規格已變更，請回到購物車重新確認。", 409, "inventory_conflict");
+    if (code === "22023" && typeof dbError.message === "string" && dbError.message.toLowerCase().includes("coupon")) return errorResponse("優惠碼無效、已過期或未達使用門檻。", 400, "coupon_invalid");
+    if (code === "22023") return errorResponse("優惠碼資料無法驗證，請重新確認。", 400, "validation_error");
+    console.error("[coupon-preview] database RPC failed", code ?? "unknown");
+    return errorResponse("目前無法檢查優惠碼，請稍後再試。", 502, "preview_unavailable");
+  }
+  return json({ preview: body });
+}
+
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return errorResponse("只接受 POST 結帳請求。", 405, "method_not_allowed");
   if (!isAuthorizedRequest(request)) return errorResponse("結帳請求未授權。", 401, "unauthorized");
@@ -157,6 +204,16 @@ Deno.serve(async (request: Request) => {
     payload = JSON.parse(raw);
   } catch {
     return errorResponse("結帳資料格式不正確，請重新確認。", 400, "invalid_request");
+  }
+
+  if (isRecord(payload) && payload.action === "preview") {
+    if (!validatePreviewPayload(payload)) return errorResponse("優惠碼資料格式不正確，請重新確認。", 400, "invalid_request");
+    try {
+      return await invokeCouponPreview(payload);
+    } catch (error) {
+      console.error("[coupon-preview] unexpected function error", error instanceof Error ? error.message : "unknown error");
+      return errorResponse("目前無法檢查優惠碼，請稍後再試。", 502, "preview_unavailable");
+    }
   }
 
   if (!validatePayload(payload)) return errorResponse("結帳資料格式不正確，請重新確認。", 400, "invalid_request");

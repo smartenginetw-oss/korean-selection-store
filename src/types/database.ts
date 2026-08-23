@@ -1134,6 +1134,10 @@ export type Database = {
         Args: { p_idempotency_key: string; p_payload: Json }
         Returns: Json
       }
+      preview_coupon_discount: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
