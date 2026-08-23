@@ -66,6 +66,7 @@ export type AdminOrderDetail = {
   currency: string;
   subtotal: number;
   discountTotal: number;
+  couponCode: string | null;
   shippingTotal: number;
   grandTotal: number;
   paymentStatus: string;
@@ -190,7 +191,7 @@ export async function getAdminOrderDetail(orderId: string) {
   const supabase = await createClient();
   const orderResult = await supabase
     .from("orders")
-    .select("id,order_number,profile_id,email,phone,recipient_name,postal_code,city,district,address_line,currency,subtotal,discount_total,shipping_total,grand_total,payment_status,fulfillment_status,order_status,stock_mode,customer_note,placed_at,created_at,updated_at")
+    .select("id,order_number,profile_id,email,phone,recipient_name,postal_code,city,district,address_line,currency,subtotal,discount_total,coupon_code,shipping_total,grand_total,payment_status,fulfillment_status,order_status,stock_mode,customer_note,placed_at,created_at,updated_at")
     .eq("id", orderId)
     .maybeSingle();
 
@@ -244,6 +245,7 @@ export async function getAdminOrderDetail(orderId: string) {
     currency: row.currency,
     subtotal: row.subtotal,
     discountTotal: row.discount_total,
+    couponCode: row.coupon_code,
     shippingTotal: row.shipping_total,
     grandTotal: row.grand_total,
     paymentStatus: row.payment_status,

@@ -124,6 +124,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
           <dl className={styles.detailList}>
             <div><dt>商品小計</dt><dd>{formatTwd(order.subtotal)}</dd></div>
             <div><dt>折扣</dt><dd>{order.discountTotal ? `−${formatTwd(order.discountTotal)}` : formatTwd(0)}</dd></div>
+            {order.couponCode && <div><dt>優惠碼</dt><dd>{order.couponCode}</dd></div>}
             <div><dt>宅配運費</dt><dd>{formatTwd(order.shippingTotal)}</dd></div>
             <div className={styles.totalRow}><dt>訂單總額</dt><dd>{formatTwd(order.grandTotal)}</dd></div>
           </dl>
