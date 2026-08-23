@@ -26,6 +26,71 @@ export type AdminShipmentSummary = {
   deliveredAt: string | null;
 };
 
+export type AdminOrderItemDetail = {
+  id: string;
+  productName: string;
+  variantName: string;
+  sku: string;
+  selectedOptions: Record<string, string>;
+  unitPrice: number;
+  unitCost: number | null;
+  quantity: number;
+  lineTotal: number;
+  fulfillmentMode: string;
+  preorderAvailableAt: string | null;
+  imagePath: string | null;
+};
+
+export type AdminOrderTimelineEntry = {
+  id: string;
+  eventType: string;
+  fromStatus: string | null;
+  toStatus: string | null;
+  actorType: string;
+  note: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type AdminOrderDetail = {
+  id: string;
+  orderNumber: string;
+  profileId: string | null;
+  email: string;
+  phone: string;
+  recipientName: string;
+  postalCode: string;
+  city: string;
+  district: string;
+  addressLine: string;
+  currency: string;
+  subtotal: number;
+  discountTotal: number;
+  shippingTotal: number;
+  grandTotal: number;
+  paymentStatus: string;
+  fulfillmentStatus: string;
+  orderStatus: string;
+  stockMode: string;
+  customerNote: string | null;
+  placedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  items: AdminOrderItemDetail[];
+  payments: Array<{
+    id: string;
+    provider: string;
+    amount: number;
+    status: string;
+    providerPaymentId: string | null;
+    failureMessage: string | null;
+    paidAt: string | null;
+    createdAt: string;
+  }>;
+  shipments: AdminShipmentSummary[];
+  timeline: AdminOrderTimelineEntry[];
+};
+
 function maskName(name: string) {
   const first = Array.from(name.trim())[0] ?? "顧客";
   return `${first}＊＊`;
@@ -113,6 +178,127 @@ export async function getAdminOrders(filter?: FulfillmentFilter, limit = 100) {
     console.error("[admin/orders] shipment read failed", shipmentError instanceof Error ? shipmentError.message : shipmentError);
     return { orders: [], error: "訂單出貨資料目前無法讀取。" };
   }
+}
+
+function asStringRecord(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => typeof item === "string")) as Record<string, string>;
+}
+
+export async function getAdminOrderDetail(orderId: string) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const orderResult = await supabase
+    .from("orders")
+    .select("id,order_number,profile_id,email,phone,recipient_name,postal_code,city,district,address_line,currency,subtotal,discount_total,shipping_total,grand_total,payment_status,fulfillment_status,order_status,stock_mode,customer_note,placed_at,created_at,updated_at")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (orderResult.error) {
+    console.error("[admin/order-detail] order read failed", orderResult.error.message);
+    return { order: null as AdminOrderDetail | null, error: "訂單資料目前無法讀取。" };
+  }
+  if (!orderResult.data) return { order: null as AdminOrderDetail | null, error: null };
+
+  const [itemsResult, paymentsResult, shipmentsResult, timelineResult] = await Promise.all([
+    supabase
+      .from("order_items")
+      .select("id,product_name,variant_name,sku,selected_options,unit_price,unit_cost,quantity,line_total,fulfillment_mode,preorder_available_at,image_path")
+      .eq("order_id", orderId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("payments")
+      .select("id,provider,amount,status,provider_payment_id,failure_message,paid_at,created_at")
+      .eq("order_id", orderId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("shipments")
+      .select("id,carrier,tracking_number,status,shipped_at,delivered_at,created_at")
+      .eq("order_id", orderId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("order_timeline")
+      .select("id,event_type,from_status,to_status,actor_type,note,metadata,created_at")
+      .eq("order_id", orderId)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const failed = [itemsResult, paymentsResult, shipmentsResult, timelineResult].find((result) => result.error);
+  if (failed?.error) {
+    console.error("[admin/order-detail] related data read failed", failed.error.message);
+    return { order: null as AdminOrderDetail | null, error: "訂單明細目前無法讀取。" };
+  }
+
+  const row = orderResult.data;
+  const order: AdminOrderDetail = {
+    id: row.id,
+    orderNumber: row.order_number,
+    profileId: row.profile_id,
+    email: row.email,
+    phone: row.phone,
+    recipientName: row.recipient_name,
+    postalCode: row.postal_code,
+    city: row.city,
+    district: row.district,
+    addressLine: row.address_line,
+    currency: row.currency,
+    subtotal: row.subtotal,
+    discountTotal: row.discount_total,
+    shippingTotal: row.shipping_total,
+    grandTotal: row.grand_total,
+    paymentStatus: row.payment_status,
+    fulfillmentStatus: row.fulfillment_status,
+    orderStatus: row.order_status,
+    stockMode: row.stock_mode,
+    customerNote: row.customer_note,
+    placedAt: row.placed_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    items: (itemsResult.data ?? []).map((item) => ({
+      id: item.id,
+      productName: item.product_name,
+      variantName: item.variant_name,
+      sku: item.sku,
+      selectedOptions: asStringRecord(item.selected_options),
+      unitPrice: item.unit_price,
+      unitCost: item.unit_cost,
+      quantity: item.quantity,
+      lineTotal: item.line_total,
+      fulfillmentMode: item.fulfillment_mode,
+      preorderAvailableAt: item.preorder_available_at,
+      imagePath: item.image_path,
+    })),
+    payments: (paymentsResult.data ?? []).map((payment) => ({
+      id: payment.id,
+      provider: payment.provider,
+      amount: payment.amount,
+      status: payment.status,
+      providerPaymentId: payment.provider_payment_id,
+      failureMessage: payment.failure_message,
+      paidAt: payment.paid_at,
+      createdAt: payment.created_at,
+    })),
+    shipments: (shipmentsResult.data ?? []).map((shipment) => ({
+      id: shipment.id,
+      carrier: shipment.carrier,
+      trackingNumber: shipment.tracking_number,
+      status: shipment.status,
+      shippedAt: shipment.shipped_at,
+      deliveredAt: shipment.delivered_at,
+    })),
+    timeline: (timelineResult.data ?? []).map((event) => ({
+      id: event.id,
+      eventType: event.event_type,
+      fromStatus: event.from_status,
+      toStatus: event.to_status,
+      actorType: event.actor_type,
+      note: event.note,
+      metadata: event.metadata && typeof event.metadata === "object" && !Array.isArray(event.metadata) ? event.metadata as Record<string, unknown> : {},
+      createdAt: event.created_at,
+    })),
+  };
+
+  return { order, error: null };
 }
 
 function taipeiDateKey(value: Date) {
