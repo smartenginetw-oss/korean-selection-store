@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireCatalog } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
 const ProductDraftSchema = z.object({
@@ -47,7 +47,7 @@ export type RegisterProductImagesResult =
   | { ok: false; message: string };
 
 export async function createProductAction(payload: unknown): Promise<CreateProductResult> {
-  await requireAdmin();
+  await requireCatalog();
 
   const parsed = ProductDraftSchema.safeParse(payload);
   if (!parsed.success) {
@@ -82,7 +82,7 @@ export async function createProductAction(payload: unknown): Promise<CreateProdu
 }
 
 export async function updateProductAction(productId: string, payload: unknown): Promise<UpdateProductResult> {
-  await requireAdmin();
+  await requireCatalog();
 
   const parsedId = z.string().uuid().safeParse(productId);
   const parsed = ProductDraftSchema.safeParse(payload);
@@ -121,7 +121,7 @@ export async function updateProductAction(productId: string, payload: unknown): 
 }
 
 export async function registerProductImagesAction(payload: unknown): Promise<RegisterProductImagesResult> {
-  await requireAdmin();
+  await requireCatalog();
 
   const parsed = ProductImagesSchema.safeParse(payload);
   if (!parsed.success) return { ok: false, message: "圖片資料格式不正確。" };
@@ -174,7 +174,7 @@ export async function registerProductImagesAction(payload: unknown): Promise<Reg
 const DeleteProductImageSchema = z.object({ productId: z.string().uuid(), imageId: z.string().uuid() });
 
 export async function deleteProductImageAction(payload: unknown): Promise<{ ok: true } | { ok: false; message: string }> {
-  await requireAdmin();
+  await requireCatalog();
   const parsed = DeleteProductImageSchema.safeParse(payload);
   if (!parsed.success) return { ok: false, message: "圖片資料格式不正確。" };
 

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireReports } from "@/lib/supabase/auth";
 
 export type AdminReportData = {
   startDate: string;
@@ -104,7 +104,7 @@ function buildBuckets(startDate: string, endDate: string, granularity: ReportGra
 }
 
 export async function getAdminReports(filters: AdminReportFilters = {}): Promise<{ report: AdminReportData | null; error: string | null }> {
-  await requireAdmin();
+  await requireReports();
   const supabase = await createClient();
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const defaultStart = addDays(today, -29);

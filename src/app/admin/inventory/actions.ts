@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireInventory } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
 const InventoryAdjustmentSchema = z.object({
@@ -16,7 +16,7 @@ const InventoryAdjustmentSchema = z.object({
 export type AdjustInventoryResult = { ok: true } | { ok: false; message: string };
 
 export async function adjustInventoryAction(payload: unknown): Promise<AdjustInventoryResult> {
-  await requireAdmin();
+  await requireInventory();
   const parsed = InventoryAdjustmentSchema.safeParse(payload);
   if (!parsed.success) return { ok: false, message: "請填寫正確的庫存數量、低庫存門檻與調整原因。" };
 

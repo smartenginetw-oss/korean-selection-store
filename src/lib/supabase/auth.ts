@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { BackofficeCapability, BackofficeRole, canAccess, isBackofficeRole } from "@/lib/supabase/roles";
 
 const adminLoginPath = "/admin-login?next=%2Fadmin";
 
@@ -23,11 +24,11 @@ export async function requireAdmin() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (error || (role?.role !== "admin" && role?.role !== "staff")) {
+  if (error || !isBackofficeRole(role?.role)) {
     redirect("/?notice=admin_only");
   }
 
-  return { user, role: role.role as "admin" | "staff" };
+  return { user, role: role.role as BackofficeRole };
 }
 
 export async function requireOwner() {
@@ -35,3 +36,17 @@ export async function requireOwner() {
   if (result.role !== "admin") redirect("/admin?notice=owner_only");
   return result;
 }
+
+export async function requireCapability(capability: BackofficeCapability) {
+  const result = await requireAdmin();
+  if (!canAccess(result.role, capability)) redirect("/admin?notice=role_forbidden");
+  return result;
+}
+
+export const requireCatalog = () => requireCapability("catalog");
+export const requireInventory = () => requireCapability("inventory");
+export const requireOrders = () => requireCapability("orders");
+export const requireCustomers = () => requireCapability("customers");
+export const requireCoupons = () => requireCapability("coupons");
+export const requireContent = () => requireCapability("content");
+export const requireReports = () => requireCapability("reports");

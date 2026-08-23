@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireCatalog } from "@/lib/supabase/auth";
 
 export type AdminProductSummary = {
   id: string;
@@ -34,7 +34,7 @@ export type AdminProductEditorData = {
 };
 
 export async function getAdminProductSummaries() {
-  await requireAdmin();
+  await requireCatalog();
   const supabase = await createClient();
   const productsResult = await supabase
     .from("products")
@@ -87,7 +87,7 @@ export async function getAdminProductSummaries() {
 }
 
 export async function getAdminProductEditorData(productId: string) {
-  await requireAdmin();
+  await requireCatalog();
   const supabase = await createClient();
   const productResult = await supabase
     .from("products")

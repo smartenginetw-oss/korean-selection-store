@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
+import { isBackofficeRole } from "@/lib/supabase/roles";
 import styles from "./auth-login-form.module.css";
 
 type Audience = "member" | "admin";
@@ -39,14 +40,14 @@ export function AuthLoginForm({ audience, nextPath }: { audience: Audience; next
       .eq("user_id", data.user.id)
       .maybeSingle();
 
-    if (isAdmin && role?.role !== "admin" && role?.role !== "staff") {
+    if (isAdmin && !isBackofficeRole(role?.role)) {
       await supabase.auth.signOut();
       setErrorMessage("這個帳號沒有後台權限，請聯絡老闆授權。");
       setPending(false);
       return;
     }
 
-    if (!isAdmin && (role?.role === "admin" || role?.role === "staff")) {
+    if (!isAdmin && isBackofficeRole(role?.role)) {
       await supabase.auth.signOut();
       setErrorMessage("這是老闆帳號，請改由後台登入入口進入。");
       setPending(false);

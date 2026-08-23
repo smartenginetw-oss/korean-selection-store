@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireContent } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import adminStyles from "../admin.module.css";
 import { updateContentAction } from "./actions";
@@ -22,7 +22,7 @@ function formatDate(value: string | null) {
 }
 
 export default async function AdminContentPage({ searchParams }: { searchParams: Promise<{ status?: string; message?: string }> }) {
-  await requireAdmin();
+  await requireContent();
   const params = await searchParams;
   const supabase = await createClient();
   const { data, error } = await supabase.from("store_pages").select("slug,title,body,is_published,updated_at").order("slug");
@@ -39,4 +39,3 @@ export default async function AdminContentPage({ searchParams }: { searchParams:
     <div className={styles.grid}>{pages.map((page) => <section className={adminStyles.panel} key={page.slug}><div className={styles.heading}><div><span className="eyebrow">/{page.slug}</span><h2>{page.title}</h2></div><span className={`badge ${page.is_published ? "badge-stock" : "badge-preorder"}`}>{page.is_published ? "已發布" : "草稿"}</span></div><form action={updateContentAction} className={styles.form}><input type="hidden" name="slug" value={page.slug} /><label>頁面標題<input className="input" name="title" required maxLength={120} defaultValue={page.title} /></label><label>頁面內容<textarea className="input" name="body" required maxLength={12000} rows={7} defaultValue={page.body} /></label><div className={styles.actions}><label className={styles.checkbox}><input name="isPublished" type="checkbox" defaultChecked={page.is_published} /><span>公開發布</span></label><button className="button button-primary button-small" type="submit">儲存內容</button></div><small className={styles.updated}>最後更新：{formatDate(page.updated_at)}</small></form></section>)}</div>
   </>;
 }
-

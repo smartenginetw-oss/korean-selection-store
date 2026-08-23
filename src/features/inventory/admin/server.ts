@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireInventory } from "@/lib/supabase/auth";
 
 export type AdminInventoryRow = {
   variantId: string;
@@ -13,7 +13,7 @@ export type AdminInventoryRow = {
 };
 
 export async function getAdminInventory() {
-  await requireAdmin();
+  await requireInventory();
   const supabase = await createClient();
   const { data: inventory, error: inventoryError } = await supabase
     .from("inventory_levels")

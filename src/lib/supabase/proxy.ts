@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import type { Database } from "@/types/database";
+import { isBackofficeRole } from "@/lib/supabase/roles";
 
 /**
  * Refresh the Supabase SSR session and apply an optimistic admin redirect.
@@ -55,7 +56,7 @@ export async function updateSession(request: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (role?.role !== "admin" && role?.role !== "staff") {
+    if (!isBackofficeRole(role?.role)) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
       url.search = "?notice=admin_only";

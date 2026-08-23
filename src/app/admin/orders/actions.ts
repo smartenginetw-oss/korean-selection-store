@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireOrders } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
 const FulfillmentStatus = z.enum(["unfulfilled", "awaiting_stock", "processing", "shipped", "delivered", "cancelled"]);
@@ -27,7 +27,7 @@ export type UpdateOrderResult =
   | { ok: false; message: string };
 
 export async function updateOrderFulfillmentAction(payload: unknown): Promise<UpdateOrderResult> {
-  await requireAdmin();
+  await requireOrders();
 
   const parsed = UpdateOrderSchema.safeParse(payload);
   if (!parsed.success) return { ok: false, message: "請確認履約狀態與出貨資訊。" };

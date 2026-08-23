@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireCoupons } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
 const CouponFormSchema = z.object({
@@ -30,7 +30,7 @@ function couponRedirect(status: string, message?: string): never {
 }
 
 export async function createCouponAction(formData: FormData) {
-  await requireAdmin();
+  await requireCoupons();
   const parsed = CouponFormSchema.safeParse({
     code: formData.get("code"),
     discountType: formData.get("discountType"),
@@ -78,7 +78,7 @@ export async function createCouponAction(formData: FormData) {
 }
 
 export async function toggleCouponAction(formData: FormData) {
-  await requireAdmin();
+  await requireCoupons();
   const id = z.string().uuid().safeParse(formData.get("id"));
   const isActive = String(formData.get("isActive")) === "true";
   if (!id.success) couponRedirect("error", "優惠碼資料不正確。");

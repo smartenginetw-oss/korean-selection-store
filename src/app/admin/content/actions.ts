@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireContent } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
 const ContentSchema = z.object({
@@ -21,7 +21,7 @@ function contentRedirect(status: "updated" | "error", message?: string): never {
 }
 
 export async function updateContentAction(formData: FormData) {
-  const { user } = await requireAdmin();
+  const { user } = await requireContent();
   const parsed = ContentSchema.safeParse({
     slug: formData.get("slug"),
     title: formData.get("title"),
@@ -49,4 +49,3 @@ export async function updateContentAction(formData: FormData) {
   revalidatePath("/admin/content");
   contentRedirect("updated");
 }
-

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireCoupons } from "@/lib/supabase/auth";
 import { formatTwd } from "@/lib/money";
 import { createCouponAction, toggleCouponAction } from "./actions";
 import { CouponDatePicker } from "./coupon-date-picker";
@@ -12,7 +12,7 @@ function formatDate(value: string | null) {
 }
 
 export default async function AdminCouponsPage({ searchParams }: { searchParams: Promise<{ status?: string; message?: string }> }) {
-  await requireAdmin();
+  await requireCoupons();
   const params = await searchParams;
   const supabase = await createClient();
   const { data: coupons, error } = await supabase.from("coupons").select("id,code,discount_type,discount_value,minimum_subtotal,usage_limit,usage_count,starts_at,ends_at,is_active,created_at").order("created_at", { ascending: false });

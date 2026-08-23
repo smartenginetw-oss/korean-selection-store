@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireCustomers } from "@/lib/supabase/auth";
 
 export type AdminCustomerSummary = {
   name: string;
@@ -35,7 +35,7 @@ function maskPhone(value: string) {
 }
 
 export async function getAdminCustomers() {
-  await requireAdmin();
+  await requireCustomers();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("orders")

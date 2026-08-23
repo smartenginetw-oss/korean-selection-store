@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/supabase/auth";
+import { requireOrders } from "@/lib/supabase/auth";
 
 const fulfillmentFilters = ["unfulfilled", "awaiting_stock", "processing", "shipped", "delivered", "cancelled"] as const;
 export type FulfillmentFilter = (typeof fulfillmentFilters)[number];
@@ -157,7 +157,7 @@ export function isFulfillmentFilter(value: string | undefined): value is Fulfill
 }
 
 export async function getAdminOrders(filter?: FulfillmentFilter, limit = 100) {
-  await requireAdmin();
+  await requireOrders();
   const supabase = await createClient();
   let query = supabase
     .from("orders")
@@ -187,7 +187,7 @@ function asStringRecord(value: unknown): Record<string, string> {
 }
 
 export async function getAdminOrderDetail(orderId: string) {
-  await requireAdmin();
+  await requireOrders();
   const supabase = await createClient();
   const orderResult = await supabase
     .from("orders")
@@ -308,7 +308,7 @@ function taipeiDateKey(value: Date) {
 }
 
 export async function getAdminDashboardData() {
-  await requireAdmin();
+  await requireOrders();
   const supabase = await createClient();
   const [ordersResult, inventoryResult] = await Promise.all([
     supabase

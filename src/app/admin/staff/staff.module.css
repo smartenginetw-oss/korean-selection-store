@@ -2,8 +2,11 @@
 .form { display: grid; gap: 14px; }
 .form label { display: grid; gap: 7px; color: var(--color-text-secondary); font-size: .78rem; }
 .actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.roleCards { display: grid; gap: 8px; margin-top: 16px; }
+.roleCard { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-muted); }
+.roleCard strong { font-size: .82rem; }
+.roleCard span { color: var(--color-text-secondary); font-size: .76rem; }
 .rules { display: grid; gap: 12px; margin: 0; padding-left: 18px; color: var(--color-text-secondary); font-size: .82rem; line-height: 1.65; }
 .ownerLabel { color: var(--color-text-muted); font-size: .75rem; }
 .error { margin-bottom: 18px; padding: 12px 14px; border-radius: var(--radius-md); color: #8b4136; background: color-mix(in srgb, #8b4136 8%, var(--color-surface)); border: 1px solid color-mix(in srgb, #8b4136 30%, var(--color-border)); font-size: .82rem; }
 @media (min-width: 720px) { .grid { grid-template-columns: minmax(0,1.25fr) minmax(260px,.75fr); } }
-

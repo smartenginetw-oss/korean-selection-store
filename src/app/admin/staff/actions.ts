@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const StaffSchema = z.object({
   email: z.string().trim().email().max(254),
-  role: z.enum(["staff", "customer"]),
+  role: z.enum(["staff", "catalog_staff", "order_staff", "customer"]),
 });
 
 function staffRedirect(status: "updated" | "error", message?: string): never {
@@ -35,4 +35,3 @@ export async function setStaffMemberAction(formData: FormData) {
   revalidatePath("/admin/staff");
   staffRedirect("updated");
 }
-
