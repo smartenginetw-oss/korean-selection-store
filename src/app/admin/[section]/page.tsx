@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import styles from "../admin.module.css";
 
-const labels: Record<string, string> = { inventory: "庫存管理", customers: "顧客", coupons: "優惠碼", content: "首頁內容", reports: "基礎報表", settings: "商店設定" };
+const labels: Record<string, string> = { inventory: "庫存管理", customers: "顧客管理", coupons: "優惠碼管理", content: "內容管理", reports: "報表分析", settings: "商店設定" };
 
 export default async function AdminSectionPage({ params }: { params: Promise<{ section: string }> }) {
   const { section } = await params; const label = labels[section]; if (!label) notFound();

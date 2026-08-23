@@ -5,8 +5,8 @@ import styles from "./admin-shell.module.css";
 
 const sections = [
   ["總覽", "/admin"], ["商品", "/admin/products"], ["新增商品", "/admin/products/new"],
-  ["庫存", "/admin/inventory"], ["訂單", "/admin/orders"], ["顧客", "/admin/customers"],
-  ["優惠碼", "/admin/coupons"], ["內容", "/admin/content"], ["報表", "/admin/reports"], ["設定", "/admin/settings"],
+  ["庫存", "/admin/inventory"], ["訂單", "/admin/orders"], ["顧客管理", "/admin/customers"],
+  ["優惠碼管理", "/admin/coupons"], ["內容管理", "/admin/content"], ["報表分析", "/admin/reports"], ["商店設定", "/admin/settings"],
 ];
 
 export function AdminShell({ children, email }: { children: React.ReactNode; email?: string }) {
