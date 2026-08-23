@@ -1,15 +1,25 @@
 import { formatTwd } from "@/lib/money";
-import { getAdminReports } from "@/features/reports/admin/server";
+import { getAdminReports, type ReportGranularity } from "@/features/reports/admin/server";
 import styles from "./reports.module.css";
 import adminStyles from "../admin.module.css";
 
-export default async function AdminReportsPage() {
-  const { report, error } = await getAdminReports();
+export default async function AdminReportsPage({ searchParams }: { searchParams?: Promise<{ start?: string | string[]; end?: string | string[]; granularity?: string | string[] }> }) {
+  const params = searchParams ? await searchParams : {};
+  const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
+  const filters = { start: first(params.start), end: first(params.end), granularity: first(params.granularity) };
+  const { report, error } = await getAdminReports(filters);
+  const granularityLabel: Record<ReportGranularity, string> = { day: "每日", month: "每月", year: "每年" };
 
   return <>
-    <div className={adminStyles.titleRow}><div><div className="eyebrow">Reports · Last 30 days</div><h1 className="serif">報表分析</h1></div>{report && <span className={styles.period}>{report.periodLabel}</span>}</div>
+    <div className={adminStyles.titleRow}><div><div className="eyebrow">Reports · Flexible period</div><h1 className="serif">報表分析</h1></div>{report && <span className={styles.period}>{report.periodLabel} · {granularityLabel[report.granularity]}</span>}</div>
     {error && <div className={adminStyles.notice}>{error}</div>}
     {report && <>
+      <form className={styles.filters} method="get">
+        <div className={styles.filterField}><label htmlFor="report-start">起始日期</label><input className="input" id="report-start" name="start" type="date" defaultValue={report.startDate} /></div>
+        <div className={styles.filterField}><label htmlFor="report-end">結束日期</label><input className="input" id="report-end" name="end" type="date" defaultValue={report.endDate} /></div>
+        <div className={styles.filterField}><label htmlFor="report-granularity">統計粒度</label><select className="input" id="report-granularity" name="granularity" defaultValue={report.granularity}><option value="day">每日</option><option value="month">每月</option><option value="year">每年</option></select></div>
+        <button className="button button-primary button-small" type="submit">更新報表</button><span className={styles.filterHint}>最多查詢 10 年</span>
+      </form>
       <section className={styles.metricGrid} aria-label="營運摘要">
         <div className={styles.metric}><span>有效訂單</span><strong>{report.metrics.orderCount}</strong><small>近 30 天</small></div>
         <div className={styles.metric}><span>已付款訂單</span><strong>{report.metrics.paidOrderCount}</strong><small>不含取消</small></div>
@@ -18,9 +28,9 @@ export default async function AdminReportsPage() {
       </section>
 
       <section className={styles.panel}>
-        <div className={styles.panelHeading}><h2>近 14 日營收趨勢</h2><span>以已付款訂單計算</span></div>
-        <div className={styles.chart} aria-label="近 14 日營收長條圖">
-          {report.daily.map((day) => { const max = Math.max(...report.daily.map((item) => item.revenue), 1); const height = day.revenue ? Math.max(8, Math.round((day.revenue / max) * 100)) : 3; return <div className={styles.barItem} key={day.date} title={`${day.label}：${formatTwd(day.revenue)}／${day.orders} 筆`}><div className={styles.barTrack}><span className={styles.bar} style={{ height: `${height}%` }} /></div><small>{day.label}</small></div>; })}
+        <div className={styles.panelHeading}><h2>{granularityLabel[report.granularity]}營收趨勢</h2><span>以已付款訂單計算</span></div>
+        <div className={styles.chart} aria-label={`${granularityLabel[report.granularity]}營收長條圖`}>
+          {report.trend.map((day) => { const max = Math.max(...report.trend.map((item) => item.revenue), 1); const height = day.revenue ? Math.max(8, Math.round((day.revenue / max) * 100)) : 3; return <div className={styles.barItem} key={day.date} title={`${day.label}：${formatTwd(day.revenue)}／${day.orders} 筆`}><div className={styles.barTrack}><span className={styles.bar} style={{ height: `${height}%` }} /></div><small>{day.label}</small></div>; })}
         </div>
       </section>
 

@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/auth";
 
 export type AdminReportData = {
+  startDate: string;
+  endDate: string;
+  granularity: ReportGranularity;
   periodLabel: string;
   metrics: {
     orderCount: number;
@@ -11,8 +14,16 @@ export type AdminReportData = {
   };
   stockModes: Array<{ label: string; count: number }>;
   fulfillment: Array<{ label: string; count: number }>;
-  daily: Array<{ label: string; date: string; orders: number; revenue: number }>;
+  trend: Array<{ label: string; date: string; orders: number; revenue: number }>;
   topProducts: Array<{ name: string; quantity: number; revenue: number }>;
+};
+
+export type ReportGranularity = "day" | "month" | "year";
+
+export type AdminReportFilters = {
+  start?: string;
+  end?: string;
+  granularity?: string;
 };
 
 const fulfillmentLabels: Record<string, string> = {
@@ -32,17 +43,86 @@ function shortDate(value: Date) {
   return new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", month: "numeric", day: "numeric" }).format(value);
 }
 
-export async function getAdminReports(): Promise<{ report: AdminReportData | null; error: string | null }> {
+function isDateInput(value: string | undefined): value is string {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)));
+}
+
+function inputDateKey(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
+function addDays(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return inputDateKey(date);
+}
+
+function bucketKey(value: string, granularity: ReportGranularity) {
+  const day = dateKey(value);
+  if (granularity === "month") return day.slice(0, 7);
+  if (granularity === "year") return day.slice(0, 4);
+  return day;
+}
+
+function bucketLabel(value: string, granularity: ReportGranularity) {
+  if (granularity === "year") return value;
+  if (granularity === "month") return value.replace("-", "／");
+  return shortDate(new Date(`${value}T00:00:00Z`));
+}
+
+function buildBuckets(startDate: string, endDate: string, granularity: ReportGranularity) {
+  const buckets: Array<{ date: string; label: string; orders: number; revenue: number }> = [];
+  if (granularity === "year") {
+    const startYear = Number(startDate.slice(0, 4));
+    const endYear = Number(endDate.slice(0, 4));
+    for (let year = startYear; year <= endYear; year += 1) {
+      const date = String(year);
+      buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0 });
+    }
+    return buckets;
+  }
+
+  if (granularity === "month") {
+    const start = new Date(`${startDate.slice(0, 7)}-01T00:00:00Z`);
+    const end = new Date(`${endDate.slice(0, 7)}-01T00:00:00Z`);
+    while (start <= end) {
+      const date = start.toISOString().slice(0, 7);
+      buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0 });
+      start.setUTCMonth(start.getUTCMonth() + 1);
+    }
+    return buckets;
+  }
+
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+  while (start <= end) {
+    const date = inputDateKey(start);
+    buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0 });
+    start.setUTCDate(start.getUTCDate() + 1);
+  }
+  return buckets;
+}
+
+export async function getAdminReports(filters: AdminReportFilters = {}): Promise<{ report: AdminReportData | null; error: string | null }> {
   await requireAdmin();
   const supabase = await createClient();
-  const start = new Date();
-  start.setDate(start.getDate() - 29);
-  start.setHours(0, 0, 0, 0);
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const defaultStart = addDays(today, -29);
+  const startDate = isDateInput(filters.start) ? filters.start : defaultStart;
+  const endDate = isDateInput(filters.end) ? filters.end : today;
+  let safeStartDate = startDate <= endDate ? startDate : endDate;
+  const safeEndDate = startDate <= endDate ? endDate : startDate;
+  const maxRangeDays = 3660;
+  const selectedRangeDays = Math.floor((Date.parse(`${safeEndDate}T00:00:00Z`) - Date.parse(`${safeStartDate}T00:00:00Z`)) / 86400000) + 1;
+  if (selectedRangeDays > maxRangeDays) safeStartDate = addDays(safeEndDate, -(maxRangeDays - 1));
+  const granularity: ReportGranularity = filters.granularity === "month" || filters.granularity === "year" ? filters.granularity : "day";
+  const endExclusive = addDays(safeEndDate, 1);
 
   const ordersResult = await supabase
     .from("orders")
     .select("id,grand_total,payment_status,fulfillment_status,order_status,stock_mode,created_at")
-    .gte("created_at", start.toISOString())
+    .gte("created_at", `${safeStartDate}T00:00:00+08:00`)
+    .lt("created_at", `${endExclusive}T00:00:00+08:00`)
     .order("created_at", { ascending: true })
     .limit(5000);
 
@@ -65,14 +145,10 @@ export async function getAdminReports(): Promise<{ report: AdminReportData | nul
     return { report: null, error: "商品銷售報表目前無法讀取。" };
   }
 
-  const days = Array.from({ length: 14 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (13 - index));
-    return { date: dateKey(date), label: shortDate(date), orders: 0, revenue: 0 };
-  });
-  const dailyByDate = new Map(days.map((day) => [day.date, day]));
+  const trend = buildBuckets(safeStartDate, safeEndDate, granularity);
+  const trendByDate = new Map(trend.map((day) => [day.date, day]));
   for (const order of paidOrders) {
-    const day = dailyByDate.get(dateKey(order.created_at));
+    const day = trendByDate.get(bucketKey(order.created_at, granularity));
     if (day) {
       day.orders += 1;
       day.revenue += order.grand_total;
@@ -103,11 +179,14 @@ export async function getAdminReports(): Promise<{ report: AdminReportData | nul
 
   return {
     report: {
-      periodLabel: `${shortDate(start)} — ${shortDate(new Date())}`,
+      startDate: safeStartDate,
+      endDate: safeEndDate,
+      granularity,
+      periodLabel: `${safeStartDate} — ${safeEndDate}`,
       metrics: { orderCount: activeOrders.length, paidOrderCount: paidOrders.length, revenue, averageOrderValue: paidOrders.length ? Math.round(revenue / paidOrders.length) : 0 },
       stockModes,
       fulfillment,
-      daily: days,
+      trend,
       topProducts: Array.from(productMap.values()).sort((left, right) => right.revenue - left.revenue).slice(0, 5),
     },
     error: null,
