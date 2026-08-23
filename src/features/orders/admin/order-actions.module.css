@@ -1,0 +1,10 @@
+.details { min-width: 220px; }
+.details summary { cursor: pointer; color: var(--color-primary); font-size: .78rem; font-weight: 700; }
+.form { display: grid; gap: 8px; margin-top: 10px; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-muted); }
+.form label { display: grid; gap: 4px; color: var(--color-text-secondary); font-size: .72rem; }
+.form .input { min-height: 36px; padding: 7px 9px; font-size: .78rem; }
+.form textarea.input { min-height: 54px; resize: vertical; }
+.form button { width: 100%; }
+.error, .success { margin: 0; padding: 8px 9px; border-radius: var(--radius-sm); font-size: .72rem; line-height: 1.45; }
+.error { background: #f5e5e0; color: #8b4136; }
+.success { background: var(--color-success-bg); color: var(--color-success); }

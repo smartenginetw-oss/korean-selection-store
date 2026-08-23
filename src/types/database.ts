@@ -1060,6 +1060,10 @@ export type Database = {
         Args: { p_payload: Json }
         Returns: Json
       }
+      update_admin_order_fulfillment: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
       create_checkout_order: {
         Args: { p_idempotency_key: string; p_payload: Json }
         Returns: Json

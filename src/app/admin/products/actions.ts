@@ -31,6 +31,19 @@ export type CreateProductResult =
   | { ok: true; product: { id: string; slug: string; name: string } }
   | { ok: false; message: string };
 
+const ProductImagesSchema = z.object({
+  productId: z.string().uuid(),
+  images: z.array(z.object({
+    path: z.string().trim().min(1).max(300),
+    altText: z.string().trim().max(200),
+    sortOrder: z.number().int().nonnegative().max(100),
+  })).min(1).max(8),
+});
+
+export type RegisterProductImagesResult =
+  | { ok: true; count: number }
+  | { ok: false; message: string };
+
 export async function createProductAction(payload: unknown): Promise<CreateProductResult> {
   await requireAdmin();
 
@@ -64,4 +77,55 @@ export async function createProductAction(payload: unknown): Promise<CreateProdu
   revalidatePath("/products");
   if (parsed.data.status === "active") revalidatePath(`/products/${product.slug}`);
   return { ok: true, product: { id: product.id, slug: product.slug, name: product.name } };
+}
+
+export async function registerProductImagesAction(payload: unknown): Promise<RegisterProductImagesResult> {
+  await requireAdmin();
+
+  const parsed = ProductImagesSchema.safeParse(payload);
+  if (!parsed.success) return { ok: false, message: "圖片資料格式不正確。" };
+
+  const supabase = await createClient();
+  const { data: product, error: productError } = await supabase
+    .from("products")
+    .select("id,slug")
+    .eq("id", parsed.data.productId)
+    .maybeSingle();
+
+  if (productError || !product) return { ok: false, message: "找不到要上傳圖片的商品。" };
+
+  const pathPrefix = "products/" + parsed.data.productId + "/";
+  const hasInvalidPath = parsed.data.images.some(({ path }) => (
+    !path.startsWith(pathPrefix)
+    || path.includes("..")
+    || !/\.(jpg|jpeg|png|webp|avif)$/i.test(path)
+  ));
+  if (hasInvalidPath) return { ok: false, message: "圖片路徑不符合商品圖片規則。" };
+
+  const { count, error: countError } = await supabase
+    .from("product_images")
+    .select("id", { count: "exact", head: true })
+    .eq("product_id", parsed.data.productId);
+  if (countError) {
+    console.error("[admin/products] image count failed", countError.message);
+    return { ok: false, message: "圖片目前無法儲存，請稍後再試。" };
+  }
+
+  const rows = parsed.data.images.map((image, index) => ({
+    product_id: parsed.data.productId,
+    storage_path: image.path,
+    alt_text: image.altText,
+    sort_order: image.sortOrder,
+    is_primary: !count && index === 0,
+  }));
+  const { error } = await supabase.from("product_images").upsert(rows, { onConflict: "storage_path" });
+  if (error) {
+    console.error("[admin/products] image register failed", error.message);
+    return { ok: false, message: "圖片目前無法儲存，請稍後再試。" };
+  }
+
+  revalidatePath("/admin/products");
+  revalidatePath("/products");
+  revalidatePath("/products/" + product.slug);
+  return { ok: true, count: rows.length };
 }

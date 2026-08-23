@@ -2,3 +2,4 @@
 @media (min-width: 720px) { .metrics { grid-template-columns: repeat(4,1fr); }.panelGrid { grid-template-columns: minmax(0,1.7fr) minmax(260px,.7fr); } }
 .empty { color: var(--color-text-muted); padding: 10px 0; }.notice { margin-bottom: 18px; padding: 12px 14px; border-radius: var(--radius-md); background: var(--color-success-bg); color: var(--color-success); font-size: .82rem; }
 .filters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }.filters label { color: var(--color-text-secondary); font-size: .78rem; }.filters .input { min-width: 150px; min-height: 40px; }
+.tableScroll { overflow-x: auto; }

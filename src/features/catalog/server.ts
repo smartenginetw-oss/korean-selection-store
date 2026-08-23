@@ -13,6 +13,7 @@ type VariantRow = Pick<
   "id" | "product_id" | "sku" | "status" | "price_override" | "fulfillment_mode" | "preorder_available_at"
 >;
 type VariantOptionRow = Pick<Tables<"variant_option_values">, "variant_id" | "option_value_id">;
+type ImageRow = Pick<Tables<"product_images">, "product_id" | "storage_path" | "sort_order" | "is_primary">;
 
 const PALETTES: Record<string, [string, string]> = {
   "soft-oversize-knit": ["#d8c5ae", "#9a8a79"],
@@ -70,6 +71,7 @@ function mapProduct(
   row: ProductRow,
   optionsByProduct: Map<string, ProductOptionGroup[]>,
   variantsByProduct: Map<string, ProductVariant[]>,
+  imagesByProduct: Map<string, string[]>,
 ): Product {
   const optionGroups = optionsByProduct.get(row.id) ?? [];
   const variants = variantsByProduct.get(row.id) ?? [];
@@ -95,6 +97,7 @@ function mapProduct(
     badge,
     availability,
     arrival: preorderVariant?.arrival,
+    images: imagesByProduct.get(row.id) ?? [],
     palette: PALETTES[row.slug] ?? ["#d8c5ae", "#9a8a79"],
     colors,
     sizes,
@@ -109,7 +112,7 @@ export async function getCatalog(): Promise<Product[]> {
   const client = getPublicClient();
   if (!client) return mockProducts;
 
-  const [productsResult, optionsResult, valuesResult, variantsResult, linksResult] = await Promise.all([
+  const [productsResult, optionsResult, valuesResult, variantsResult, linksResult, imagesResult] = await Promise.all([
     client
       .from("products")
       .select("id,name,slug,description,original_price,sale_price,status,tags,published_at")
@@ -122,9 +125,14 @@ export async function getCatalog(): Promise<Product[]> {
       .select("id,product_id,sku,status,price_override,fulfillment_mode,preorder_available_at")
       .eq("status", "active"),
     client.from("variant_option_values").select("variant_id,option_value_id"),
+    client
+      .from("product_images")
+      .select("product_id,storage_path,sort_order,is_primary")
+      .order("is_primary", { ascending: false })
+      .order("sort_order", { ascending: true }),
   ]);
 
-  const error = productsResult.error ?? optionsResult.error ?? valuesResult.error ?? variantsResult.error ?? linksResult.error;
+  const error = productsResult.error ?? optionsResult.error ?? valuesResult.error ?? variantsResult.error ?? linksResult.error ?? imagesResult.error;
   if (error) {
     console.error("[catalog] Supabase read failed; using local fallback.", error.message);
     return mockProducts;
@@ -137,6 +145,7 @@ export async function getCatalog(): Promise<Product[]> {
   const values = valuesResult.data as OptionValueRow[];
   const variants = variantsResult.data as VariantRow[];
   const links = linksResult.data as VariantOptionRow[];
+  const images = (imagesResult.data ?? []) as ImageRow[];
   const optionById = new Map(options.map((option) => [option.id, option]));
   const valueById = new Map(values.map((value) => [value.id, value]));
   const linksByVariant = new Map<string, string[]>();
@@ -182,7 +191,15 @@ export async function getCatalog(): Promise<Product[]> {
     variantsByProduct.set(variant.product_id, current);
   }
 
-  return productRows.map((row) => mapProduct(row, optionsByProduct, variantsByProduct));
+  const imagesByProduct = new Map<string, string[]>();
+  for (const image of images.sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order)) {
+    const publicUrl = client.storage.from("product-images").getPublicUrl(image.storage_path).data.publicUrl;
+    const current = imagesByProduct.get(image.product_id) ?? [];
+    current.push(publicUrl);
+    imagesByProduct.set(image.product_id, current);
+  }
+
+  return productRows.map((row) => mapProduct(row, optionsByProduct, variantsByProduct, imagesByProduct));
 }
 
 export async function getProductBySlug(slug: string) {

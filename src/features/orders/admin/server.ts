@@ -14,6 +14,16 @@ export type AdminOrderSummary = {
   fulfillmentStatus: string;
   grandTotal: number;
   createdAt: string;
+  shipment: AdminShipmentSummary | null;
+};
+
+export type AdminShipmentSummary = {
+  id: string;
+  carrier: string;
+  trackingNumber: string;
+  status: string;
+  shippedAt: string | null;
+  deliveredAt: string | null;
 };
 
 function maskName(name: string) {
@@ -37,7 +47,7 @@ function mapOrder(row: {
   fulfillment_status: string;
   grand_total: number;
   created_at: string;
-}): AdminOrderSummary {
+}, shipment: AdminShipmentSummary | null = null): AdminOrderSummary {
   return {
     id: row.id,
     orderNumber: row.order_number,
@@ -48,7 +58,32 @@ function mapOrder(row: {
     fulfillmentStatus: row.fulfillment_status,
     grandTotal: row.grand_total,
     createdAt: row.created_at,
+    shipment,
   };
+}
+
+async function getLatestShipments(supabase: Awaited<ReturnType<typeof createClient>>, orderIds: string[]) {
+  if (!orderIds.length) return new Map<string, AdminShipmentSummary>();
+  const { data, error } = await supabase
+    .from("shipments")
+    .select("id,order_id,carrier,tracking_number,status,shipped_at,delivered_at,created_at")
+    .in("order_id", orderIds)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+
+  const byOrder = new Map<string, AdminShipmentSummary>();
+  for (const row of data ?? []) {
+    if (byOrder.has(row.order_id)) continue;
+    byOrder.set(row.order_id, {
+      id: row.id,
+      carrier: row.carrier,
+      trackingNumber: row.tracking_number,
+      status: row.status,
+      shippedAt: row.shipped_at,
+      deliveredAt: row.delivered_at,
+    });
+  }
+  return byOrder;
 }
 
 export function isFulfillmentFilter(value: string | undefined): value is FulfillmentFilter {
@@ -71,7 +106,13 @@ export async function getAdminOrders(filter?: FulfillmentFilter, limit = 100) {
     return { orders: [] as AdminOrderSummary[], error: "訂單資料目前無法讀取。" };
   }
 
-  return { orders: (data ?? []).map(mapOrder), error: null };
+  try {
+    const shipments = await getLatestShipments(supabase, (data ?? []).map((row) => row.id));
+    return { orders: (data ?? []).map((row) => mapOrder(row, shipments.get(row.id) ?? null)), error: null };
+  } catch (shipmentError) {
+    console.error("[admin/orders] shipment read failed", shipmentError instanceof Error ? shipmentError.message : shipmentError);
+    return { orders: [], error: "訂單出貨資料目前無法讀取。" };
+  }
 }
 
 function taipeiDateKey(value: Date) {
@@ -116,7 +157,7 @@ export async function getAdminDashboardData() {
   });
 
   return {
-    orders: rawOrders.slice(0, 5).map(mapOrder),
+    orders: rawOrders.slice(0, 5).map((row) => mapOrder(row)),
     lowStock,
     metrics: {
       revenueToday,

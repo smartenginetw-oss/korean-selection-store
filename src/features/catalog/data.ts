@@ -7,6 +7,7 @@ export type Product = {
   badge?: "NEW" | "SALE";
   availability: "in_stock" | "preorder";
   arrival?: string;
+  images?: string[];
   palette: [string, string];
   colors: string[];
   sizes: string[];
