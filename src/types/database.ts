@@ -1064,6 +1064,10 @@ export type Database = {
         Args: { p_product_id: string; p_payload: Json }
         Returns: Json
       }
+      adjust_admin_inventory: {
+        Args: { p_low_stock_threshold: number; p_on_hand: number; p_reason: string; p_variant_id: string }
+        Returns: Json
+      }
       update_admin_order_fulfillment: {
         Args: { p_payload: Json }
         Returns: Json
