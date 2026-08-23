@@ -1,0 +1,29 @@
+.period { color: var(--color-text-secondary); font-size: .78rem; }
+.metricGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.metric { display: grid; gap: 4px; padding: 18px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.metric span, .metric small { color: var(--color-text-secondary); font-size: .75rem; }
+.metric strong { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.metric small { color: var(--color-text-muted); font-size: .7rem; }
+.panel { padding: 20px; margin-bottom: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.panelHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
+.panelHeading h2 { margin: 0; font-size: 1.05rem; }
+.panelHeading span { color: var(--color-text-muted); font-size: .72rem; }
+.chart { display: grid; grid-template-columns: repeat(14, minmax(18px, 1fr)); align-items: end; gap: 8px; min-height: 188px; overflow-x: auto; padding-top: 12px; }
+.barItem { display: grid; grid-template-rows: 156px auto; min-width: 22px; gap: 9px; align-items: end; text-align: center; }
+.barTrack { display: flex; height: 100%; align-items: end; justify-content: center; }
+.bar { display: block; width: min(18px, 70%); min-height: 3px; border-radius: 999px 999px 4px 4px; background: var(--color-primary); }
+.barItem small { color: var(--color-text-muted); font-size: .64rem; white-space: nowrap; }
+.split { display: grid; gap: 0; }
+.list { display: grid; gap: 0; }
+.listRow { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--color-border); font-size: .84rem; }
+.listRow:last-child { border-bottom: 0; }
+.listRow strong { font-variant-numeric: tabular-nums; }
+.productList { display: grid; gap: 0; }
+.productRow { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--color-border); }
+.productRow:last-child { border-bottom: 0; }
+.productRow strong, .productRow small { display: block; }
+.productRow strong { font-size: .84rem; }
+.productRow small { margin-top: 3px; color: var(--color-text-secondary); font-size: .72rem; }
+.productRow b { font-size: .82rem; font-variant-numeric: tabular-nums; }
+.rank { color: var(--color-text-muted); font-family: Georgia, serif; font-size: .75rem; }
+@media (min-width: 720px) { .metricGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }.split { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }.split .panel { min-width: 0; } }
