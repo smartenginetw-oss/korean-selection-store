@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLockup } from "@/components/brand-lockup";
 import styles from "./admin-shell.module.css";
 
 const sections = [
@@ -8,5 +9,5 @@ const sections = [
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
-  return <div className={styles.shell}><aside className={styles.sidebar}><Link className={`${styles.logo} serif`} href="/admin">GYEOT <small>ADMIN</small></Link><nav>{sections.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}</nav><Link className={styles.storeLink} href="/">← 回到商城</Link></aside><div className={styles.content}><header className={styles.header}><div><span className="badge badge-preorder">PREVIEW</span></div><div className={styles.admin}>管理員 Demo</div></header><main>{children}</main></div></div>;
+  return <div className={styles.shell}><aside className={styles.sidebar}><div className={styles.brand}><BrandLockup href="/admin" size="md" /></div><nav>{sections.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}</nav><Link className={styles.storeLink} href="/">← 回到商城</Link></aside><div className={styles.content}><header className={styles.header}><div><span className="badge badge-preorder">PREVIEW</span></div><div className={styles.admin}>管理員 Demo</div></header><main>{children}</main></div></div>;
 }

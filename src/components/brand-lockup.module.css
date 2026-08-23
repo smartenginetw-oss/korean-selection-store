@@ -1,0 +1,13 @@
+.lockup { display: inline-flex; align-items: center; gap: 9px; color: inherit; line-height: 1; }
+.mark { display: inline-flex; flex: 0 0 auto; width: 28px; height: 28px; }
+.mark svg { width: 100%; height: 100%; }
+.wordmark { display: grid; gap: 4px; min-width: 0; }
+.name { font-family: Georgia, "Noto Serif TC", serif; font-size: 1.15rem; font-weight: 600; letter-spacing: .18em; }
+.korean { padding-left: .08em; color: currentColor; font-family: "Noto Serif TC", Georgia, serif; font-size: .62rem; letter-spacing: .18em; opacity: .66; }
+.sm .mark { width: 22px; height: 22px; }
+.sm .name { font-size: .94rem; letter-spacing: .16em; }
+.sm .korean { font-size: .54rem; }
+.lg { gap: 12px; }
+.lg .mark { width: 36px; height: 36px; }
+.lg .name { font-size: 1.5rem; letter-spacing: .2em; }
+.lg .korean { font-size: .7rem; }

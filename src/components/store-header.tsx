@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { BrandLockup } from "@/components/brand-lockup";
 import { useCart } from "@/features/cart/cart-provider";
 import styles from "./store-header.module.css";
 
@@ -33,7 +34,7 @@ export function StoreHeader() {
         <button className={styles.menuButton} type="button" aria-expanded={open} aria-controls="mobile-navigation" onClick={() => setOpen((value) => !value)}>
           <span aria-hidden="true">{open ? "×" : "☰"}</span><span className={styles.srOnly}>選單</span>
         </button>
-        <Link className={`${styles.logo} serif`} href="/">GYEOT</Link>
+        <BrandLockup href="/" size="md" className={styles.logo} />
         <nav className={styles.desktopNav} aria-label="主要導覽">
           {navigation.map(([label, href]) => <Link key={label} href={href}>{label}</Link>)}
         </nav>
