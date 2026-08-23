@@ -44,7 +44,7 @@ export async function updateSession(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (pathname.startsWith("/admin")) {
+  if (pathname.startsWith("/admin") && pathname !== "/admin-login") {
     if (!user) {
       return redirectToLogin(request);
     }
