@@ -1,0 +1,6 @@
+.form { display: grid; gap: 17px; }
+.form :global(.button) { width: 100%; margin-top: 3px; }
+.hint { color: var(--color-text-secondary); font-size: .74rem; }
+.error, .success { padding: 11px 13px; border-radius: var(--radius-md); font-size: .79rem; line-height: 1.5; }
+.error { border: 1px solid #d7c3bb; color: #79564c; background: #fbf2ee; }
+.success { border: 1px solid #b7d3c1; color: #356246; background: #eef8f0; }

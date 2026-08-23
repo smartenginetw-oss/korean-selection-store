@@ -13,6 +13,7 @@ const shopLinks = [
 ] as const;
 
 const memberLinks = [
+  ["會員中心", "/account"],
   ["會員登入", "/login"],
   ["購物車", "/cart"],
   ["購物說明", "/shopping-guide"],

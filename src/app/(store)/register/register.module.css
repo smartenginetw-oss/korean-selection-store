@@ -1,0 +1,9 @@
+.page { padding-block: 46px 86px; }
+.frame { max-width: 660px; margin-inline: auto; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.intro { padding: 34px 28px 26px; background: #e9e1d7; }
+.intro h1 { margin: 12px 0 12px; color: #27384d; font-size: clamp(2.3rem, 8vw, 3.6rem); font-weight: 500; line-height: 1.1; }
+.intro p { max-width: 480px; margin: 0; color: #665f5a; font-size: .9rem; }
+.formPanel { padding: 28px; }
+.links { display: flex; flex-wrap: wrap; gap: 14px 22px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--color-border); color: var(--color-primary); font-size: .82rem; }
+@media (min-width: 760px) { .page { padding-block: 72px 112px; }.intro { padding: 44px 52px 34px; }.formPanel { padding: 42px 52px; } }
+@media (max-width: 480px) { .page { width: min(calc(100% - 32px), var(--max-width)); }.intro, .formPanel { padding-inline: 22px; } }

@@ -21,7 +21,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <section className={styles.formPanel} aria-label="會員登入表單">
         <div className={styles.panelHeader}><span>MEMBER ACCESS</span><span>01 / 01</span></div>
         <LoginForm nextPath={nextPath} />
-        <div className={styles.guestNote}>還沒有會員？<Link href="/products">先逛逛男裝 →</Link></div>
+        <div className={styles.guestNote}>還沒有會員？<Link href={`/register?next=${encodeURIComponent(nextPath)}`}>建立會員帳號 →</Link></div>
         <div className={styles.links}><Link href="/">← 回到商城</Link><Link href="/shopping-guide">購物說明</Link></div>
       </section>
     </div>

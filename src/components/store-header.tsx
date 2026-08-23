@@ -40,7 +40,7 @@ export function StoreHeader() {
         </nav>
         <div className={styles.actions}>
           <Link className={styles.iconLink} href="/products" aria-label="搜尋商品" title="搜尋商品"><Icon name="search" /></Link>
-          <Link className={styles.iconLink} href="/login" aria-label="會員帳號" title="會員帳號"><Icon name="account" /></Link>
+          <Link className={styles.iconLink} href="/account" aria-label="會員中心" title="會員中心"><Icon name="account" /></Link>
           <Link className={`${styles.iconLink} ${styles.cart}`} href="/cart" aria-label={`購物車，共 ${count} 件商品`} title="購物車"><Icon name="bag" /><span>{count}</span></Link>
         </div>
       </div>
