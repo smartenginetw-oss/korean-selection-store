@@ -32,3 +32,10 @@ npm run dev
 - 商城會員登入：`/login`；訪客不需登入即可結帳。
 - 管理員／員工後台登入：`/admin-login`；後台路由 `/admin/*` 仍由 Server-side `admin` 角色保護。
 - 目前員工權限採個別 Supabase Auth 帳號，不共用帳密；V1 的 `admin` 角色是完整後台權限，細分職務權限會在員工流程確定後再加入。
+
+## Vercel 部署拓撲
+
+- 商城（`NEXT_PUBLIC_APP_MODE=store`）：<https://korean-selection-store-rebuilt.vercel.app>
+- 獨立管理站（`NEXT_PUBLIC_APP_MODE=admin`）：<https://gyeot-admin.vercel.app>
+- 兩個前端共用同一個 Supabase 專案，確保商品、庫存、訂單與帳號資料一致；管理站只開放 `/admin-login` 與 `/admin/*`。
+- 生產建置使用 `next build --webpack`，確保 Next.js Proxy 會被 Vercel 正確部署。
