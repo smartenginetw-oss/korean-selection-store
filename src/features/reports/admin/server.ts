@@ -5,25 +5,31 @@ export type AdminReportData = {
   startDate: string;
   endDate: string;
   granularity: ReportGranularity;
+  cashflow: ReportCashflow;
   periodLabel: string;
   metrics: {
     orderCount: number;
     paidOrderCount: number;
     revenue: number;
+    expense: number;
+    netCashflow: number;
+    costCoverage: number;
     averageOrderValue: number;
   };
   stockModes: Array<{ label: string; count: number }>;
   fulfillment: Array<{ label: string; count: number }>;
-  trend: Array<{ label: string; date: string; orders: number; revenue: number }>;
+  trend: Array<{ label: string; date: string; orders: number; revenue: number; expense: number; netCashflow: number }>;
   topProducts: Array<{ name: string; quantity: number; revenue: number }>;
 };
 
 export type ReportGranularity = "day" | "month" | "year";
+export type ReportCashflow = "income" | "expense" | "net";
 
 export type AdminReportFilters = {
   start?: string;
   end?: string;
   granularity?: string;
+  cashflow?: string;
 };
 
 const fulfillmentLabels: Record<string, string> = {
@@ -71,13 +77,13 @@ function bucketLabel(value: string, granularity: ReportGranularity) {
 }
 
 function buildBuckets(startDate: string, endDate: string, granularity: ReportGranularity) {
-  const buckets: Array<{ date: string; label: string; orders: number; revenue: number }> = [];
+  const buckets: Array<{ date: string; label: string; orders: number; revenue: number; expense: number; netCashflow: number }> = [];
   if (granularity === "year") {
     const startYear = Number(startDate.slice(0, 4));
     const endYear = Number(endDate.slice(0, 4));
     for (let year = startYear; year <= endYear; year += 1) {
       const date = String(year);
-      buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0 });
+      buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0, expense: 0, netCashflow: 0 });
     }
     return buckets;
   }
@@ -87,7 +93,7 @@ function buildBuckets(startDate: string, endDate: string, granularity: ReportGra
     const end = new Date(`${endDate.slice(0, 7)}-01T00:00:00Z`);
     while (start <= end) {
       const date = start.toISOString().slice(0, 7);
-      buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0 });
+      buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0, expense: 0, netCashflow: 0 });
       start.setUTCMonth(start.getUTCMonth() + 1);
     }
     return buckets;
@@ -97,7 +103,7 @@ function buildBuckets(startDate: string, endDate: string, granularity: ReportGra
   const end = new Date(`${endDate}T00:00:00Z`);
   while (start <= end) {
     const date = inputDateKey(start);
-    buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0 });
+    buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0, expense: 0, netCashflow: 0 });
     start.setUTCDate(start.getUTCDate() + 1);
   }
   return buckets;
@@ -116,6 +122,7 @@ export async function getAdminReports(filters: AdminReportFilters = {}): Promise
   const selectedRangeDays = Math.floor((Date.parse(`${safeEndDate}T00:00:00Z`) - Date.parse(`${safeStartDate}T00:00:00Z`)) / 86400000) + 1;
   if (selectedRangeDays > maxRangeDays) safeStartDate = addDays(safeEndDate, -(maxRangeDays - 1));
   const granularity: ReportGranularity = filters.granularity === "month" || filters.granularity === "year" ? filters.granularity : "day";
+  const cashflow: ReportCashflow = filters.cashflow === "expense" || filters.cashflow === "net" ? filters.cashflow : "income";
   const endExclusive = addDays(safeEndDate, 1);
 
   const ordersResult = await supabase
@@ -137,7 +144,7 @@ export async function getAdminReports(filters: AdminReportFilters = {}): Promise
   const revenue = paidOrders.reduce((sum, order) => sum + order.grand_total, 0);
   const orderIds = paidOrders.map((order) => order.id);
   const itemResult = orderIds.length
-    ? await supabase.from("order_items").select("order_id,product_name,quantity,line_total").in("order_id", orderIds)
+    ? await supabase.from("order_items").select("order_id,product_name,quantity,line_total,unit_cost").in("order_id", orderIds)
     : { data: [], error: null };
 
   if (itemResult.error) {
@@ -147,6 +154,7 @@ export async function getAdminReports(filters: AdminReportFilters = {}): Promise
 
   const trend = buildBuckets(safeStartDate, safeEndDate, granularity);
   const trendByDate = new Map(trend.map((day) => [day.date, day]));
+  const orderDateById = new Map(paidOrders.map((order) => [order.id, order.created_at]));
   for (const order of paidOrders) {
     const day = trendByDate.get(bucketKey(order.created_at, granularity));
     if (day) {
@@ -154,6 +162,23 @@ export async function getAdminReports(filters: AdminReportFilters = {}): Promise
       day.revenue += order.grand_total;
     }
   }
+
+  let expense = 0;
+  let totalCostedQuantity = 0;
+  let totalItemQuantity = 0;
+  for (const item of itemResult.data ?? []) {
+    totalItemQuantity += item.quantity;
+    if (item.unit_cost !== null) {
+      expense += item.unit_cost * item.quantity;
+      totalCostedQuantity += item.quantity;
+    }
+    const orderDate = orderDateById.get(item.order_id);
+    const day = orderDate ? trendByDate.get(bucketKey(orderDate, granularity)) : undefined;
+    if (day && item.unit_cost !== null) day.expense += item.unit_cost * item.quantity;
+  }
+  for (const day of trend) day.netCashflow = day.revenue - day.expense;
+  const netCashflow = revenue - expense;
+  const costCoverage = totalItemQuantity ? Math.round((totalCostedQuantity / totalItemQuantity) * 100) : 0;
 
   const stockModeCounts = new Map<string, number>([["in_stock", 0], ["preorder", 0], ["mixed", 0]]);
   for (const order of activeOrders) stockModeCounts.set(order.stock_mode, (stockModeCounts.get(order.stock_mode) ?? 0) + 1);
@@ -183,7 +208,8 @@ export async function getAdminReports(filters: AdminReportFilters = {}): Promise
       endDate: safeEndDate,
       granularity,
       periodLabel: `${safeStartDate} — ${safeEndDate}`,
-      metrics: { orderCount: activeOrders.length, paidOrderCount: paidOrders.length, revenue, averageOrderValue: paidOrders.length ? Math.round(revenue / paidOrders.length) : 0 },
+      cashflow,
+      metrics: { orderCount: activeOrders.length, paidOrderCount: paidOrders.length, revenue, expense, netCashflow, costCoverage, averageOrderValue: paidOrders.length ? Math.round(revenue / paidOrders.length) : 0 },
       stockModes,
       fulfillment,
       trend,

@@ -70,7 +70,7 @@ function CalendarPicker({ label, name, value, active, onOpen, onChange }: { labe
   </div>;
 }
 
-export function ReportFilters({ startDate, endDate, granularity }: { startDate: string; endDate: string; granularity: "day" | "month" | "year" }) {
+export function ReportFilters({ startDate, endDate, granularity, cashflow }: { startDate: string; endDate: string; granularity: "day" | "month" | "year"; cashflow: "income" | "expense" | "net" }) {
   const [values, setValues] = useState({ start: startDate, end: endDate });
   const [active, setActive] = useState<PickerName | null>(null);
   const containerRef = useRef<HTMLFormElement>(null);
@@ -91,7 +91,8 @@ export function ReportFilters({ startDate, endDate, granularity }: { startDate: 
   return <form className={styles.filters} method="get" ref={containerRef}>
     <div className={styles.filterField}><label htmlFor="report-start">起始日期</label><CalendarPicker label="起始日期" name="start" value={values.start} active={active === "start"} onOpen={() => setActive(active === "start" ? null : "start")} onChange={(value) => setDate("start", value)} /></div>
     <div className={styles.filterField}><label htmlFor="report-end">結束日期</label><CalendarPicker label="結束日期" name="end" value={values.end} active={active === "end"} onOpen={() => setActive(active === "end" ? null : "end")} onChange={(value) => setDate("end", value)} /></div>
-    <div className={styles.filterField}><label htmlFor="report-granularity">統計粒度</label><select className="input" id="report-granularity" name="granularity" defaultValue={granularity}><option value="day">每日</option><option value="month">每月</option><option value="year">每年</option></select></div>
+    <div className={styles.filterField}><label htmlFor="report-cashflow">統計收支</label><select className="input" id="report-cashflow" name="cashflow" defaultValue={cashflow}><option value="income">收入</option><option value="expense">支出</option><option value="net">淨收支</option></select></div>
+    <div className={styles.filterField}><label htmlFor="report-granularity">統計期間</label><select className="input" id="report-granularity" name="granularity" defaultValue={granularity}><option value="day">每日</option><option value="month">每月</option><option value="year">每年</option></select></div>
     <button className="button button-primary button-small" type="submit">更新報表</button><span className={styles.filterHint}>最多查詢 10 年</span>
   </form>;
 }

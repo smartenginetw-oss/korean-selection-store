@@ -40,6 +40,7 @@
 .barItem { display: grid; grid-template-rows: 156px auto; min-width: 22px; gap: 9px; align-items: end; text-align: center; }
 .barTrack { display: flex; height: 100%; align-items: end; justify-content: center; }
 .bar { display: block; width: min(18px, 70%); min-height: 3px; border-radius: 999px 999px 4px 4px; background: var(--color-primary); }
+.barNegative { background: #b55d4e; }
 .barItem small { color: var(--color-text-muted); font-size: .64rem; white-space: nowrap; }
 .split { display: grid; gap: 0; }
 .list { display: grid; gap: 0; }
@@ -54,5 +55,6 @@
 .productRow small { margin-top: 3px; color: var(--color-text-secondary); font-size: .72rem; }
 .productRow b { font-size: .82rem; font-variant-numeric: tabular-nums; }
 .rank { color: var(--color-text-muted); font-family: Georgia, serif; font-size: .75rem; }
+.costNote { margin: 14px 0 0; color: var(--color-text-muted); font-size: .72rem; }
 @media (min-width: 720px) { .metricGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }.split { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }.split .panel { min-width: 0; } }
 @media (max-width: 560px) { .calendar { right: 0; left: auto; width: min(286px, calc(100vw - 48px)); } }
