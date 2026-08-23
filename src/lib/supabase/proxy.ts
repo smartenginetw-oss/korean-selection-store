@@ -9,7 +9,7 @@ import type { Database } from "@/types/database";
  */
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const appMode = process.env.APP_MODE;
+  const appMode = process.env.NEXT_PUBLIC_APP_MODE ?? process.env.APP_MODE;
 
   // Store and admin are deployed as separate Vercel projects. Keep a local
   // unset APP_MODE permissive so the same checkout can still be developed
