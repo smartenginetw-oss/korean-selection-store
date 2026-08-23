@@ -12,6 +12,7 @@ type CheckoutPayload = {
   idempotencyKey: string;
   paymentProvider: "test";
   consentVersion?: string;
+  couponCode?: string;
   customer: {
     email: string;
     phone: string;
@@ -69,6 +70,7 @@ function validatePayload(value: unknown): value is CheckoutPayload {
   if (typeof value.idempotencyKey !== "string" || !IDEMPOTENCY_KEY.test(value.idempotencyKey)) return false;
   if (value.paymentProvider !== "test") return false;
   if (typeof value.consentVersion !== "undefined" && (typeof value.consentVersion !== "string" || value.consentVersion.length > 40)) return false;
+  if (typeof value.couponCode !== "undefined" && (typeof value.couponCode !== "string" || value.couponCode.trim().length > 40)) return false;
 
   const customer = value.customer;
   if (!isRecord(customer)) return false;
@@ -132,6 +134,7 @@ async function invokeCheckout(payload: CheckoutPayload) {
     const dbError = isRecord(body) ? body : {};
     const code = typeof dbError.code === "string" ? dbError.code : undefined;
     if (code === "P0001") return errorResponse("商品庫存或規格已變更，請返回購物車重新確認。", 409, "inventory_conflict");
+    if (code === "22023" && typeof dbError.message === "string" && dbError.message.toLowerCase().includes("coupon")) return errorResponse("優惠碼無效、已過期或未達使用門檻。", 400, "coupon_invalid");
     if (code === "22023") return errorResponse("結帳資料無法驗證，請重新確認。", 400, "validation_error");
     console.error("[checkout] database RPC failed", code ?? "unknown");
     return errorResponse("目前無法建立訂單，請稍後再試。", 502, "checkout_unavailable");

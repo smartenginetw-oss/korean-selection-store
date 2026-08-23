@@ -37,6 +37,7 @@ export function CheckoutForm() {
           idempotencyKey: idempotencyKey.current,
           paymentProvider: formData.get("payment") ?? "test",
           consentVersion: "terms-v1",
+          couponCode: String(formData.get("couponCode") ?? "").trim() || undefined,
           customer: {
             email: formData.get("email"),
             phone: formData.get("phone"),
@@ -49,14 +50,14 @@ export function CheckoutForm() {
           items: items.map((item) => ({ variantId: item.variantId, quantity: item.quantity })),
         }),
       });
-      const result = await response.json() as { order?: { orderNumber?: string; grandTotal?: number }; error?: { message?: string } };
+      const result = await response.json() as { order?: { orderNumber?: string; grandTotal?: number; discountTotal?: number; couponCode?: string | null }; error?: { message?: string } };
       if (!response.ok || !result.order?.orderNumber) {
         if (response.status === 409) idempotencyKey.current = null;
         throw new Error(result.error?.message ?? "目前無法建立訂單，請稍後再試。");
       }
 
       const orderNumber = result.order.orderNumber;
-      window.sessionStorage.setItem("morii-demo-order", JSON.stringify({ orderNumber, total: result.order.grandTotal ?? total }));
+      window.sessionStorage.setItem("morii-demo-order", JSON.stringify({ orderNumber, total: result.order.grandTotal ?? total, discountTotal: result.order.discountTotal ?? 0, couponCode: result.order.couponCode ?? null }));
       clearCart();
       router.push(`/checkout/result?order=${orderNumber}`);
     } catch (submitError) {
@@ -71,6 +72,7 @@ export function CheckoutForm() {
       <section><span className={styles.number}>1</span><h2 className="serif">聯絡資料</h2><div className={styles.fields}><div className="field"><label htmlFor="name">姓名</label><input className="input" id="name" name="name" autoComplete="name" required maxLength={80} /></div><div className="field"><label htmlFor="email">Email</label><input className="input" id="email" name="email" type="email" autoComplete="email" required maxLength={254} /></div><div className="field"><label htmlFor="phone">手機</label><input className="input" id="phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" required pattern="09[0-9]{8}" placeholder="0912345678" /></div></div></section>
       <section><span className={styles.number}>2</span><h2 className="serif">宅配地址</h2><div className={styles.fields}><div className="field"><label htmlFor="recipient">收件人</label><input className="input" id="recipient" name="recipient" required maxLength={80} /></div><div className={styles.row}><div className="field"><label htmlFor="city">縣市</label><select className="input" id="city" name="city" required defaultValue=""><option value="" disabled>請選擇</option><option>台北市</option><option>新北市</option><option>台中市</option><option>高雄市</option></select></div><div className="field"><label htmlFor="district">區域</label><input className="input" id="district" name="district" required maxLength={30} /></div></div><div className={styles.row}><div className="field"><label htmlFor="postalCode">郵遞區號</label><input className="input" id="postalCode" name="postalCode" inputMode="numeric" required minLength={3} maxLength={6} /></div><div /></div><div className="field"><label htmlFor="address">地址</label><input className="input" id="address" name="address" autoComplete="street-address" required maxLength={160} /></div></div></section>
       <section><span className={styles.number}>3</span><h2 className="serif">付款方式</h2><label className={styles.payment}><input type="radio" name="payment" value="test" defaultChecked /><span><strong>測試付款</strong><small>Preview 專用，不會產生真實扣款</small></span></label></section>
+      <section><span className={styles.number}>4</span><h2 className="serif">優惠碼</h2><div className="field"><label htmlFor="couponCode">優惠碼（選填）</label><input className="input" id="couponCode" name="couponCode" maxLength={40} autoCapitalize="characters" placeholder="輸入優惠碼" /><small className="muted">送出訂單時由系統驗證，符合條件才會折抵。</small></div></section>
       <label className={styles.consent}><input type="checkbox" required />我已閱讀並同意服務條款與退換貨政策</label>
     </div>
     <aside className={styles.summary}><h2 className="serif">訂單摘要</h2>{items.map((item) => <div className={styles.line} key={item.variantKey}><span>{item.name}<small>{Object.values(item.selectedOptions ?? { 顏色: item.color, 尺寸: item.size }).join("／")} × {item.quantity}</small></span><strong>{formatTwd(item.price * item.quantity)}</strong></div>)}<div className={styles.amount}><span>商品小計</span><strong>{formatTwd(subtotal)}</strong></div><div className={styles.amount}><span>宅配運費</span><strong>{formatTwd(items.length ? 80 : 0)}</strong></div><div className={`${styles.amount} ${styles.total}`}><span>總計</span><strong>{formatTwd(total)}</strong></div><button className="button button-primary" type="submit" disabled={submitting || !items.length}>{submitting ? "建立訂單中…" : "確認測試訂單"}</button><p>測試付款會由 Server 驗證價格並保留庫存 15 分鐘，不會產生真實扣款。</p></aside>

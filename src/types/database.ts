@@ -195,6 +195,51 @@ export type Database = {
           },
         ]
       }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          discount_type: string
+          discount_value: number
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          minimum_subtotal: number
+          starts_at: string | null
+          updated_at: string
+          usage_count: number
+          usage_limit: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          discount_type: string
+          discount_value: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          minimum_subtotal?: number
+          starts_at?: string | null
+          updated_at?: string
+          usage_count?: number
+          usage_limit?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          minimum_subtotal?: number
+          starts_at?: string | null
+          updated_at?: string
+          usage_count?: number
+          usage_limit?: number | null
+        }
+        Relationships: []
+      }
       inventory_levels: {
         Row: {
           low_stock_threshold: number
@@ -466,6 +511,8 @@ export type Database = {
           completed_at: string | null
           created_at: string
           currency: string
+          coupon_code: string | null
+          coupon_id: string | null
           customer_note: string | null
           discount_total: number
           district: string
@@ -494,6 +541,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           currency?: string
+          coupon_code?: string | null
+          coupon_id?: string | null
           customer_note?: string | null
           discount_total?: number
           district: string
@@ -522,6 +571,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           currency?: string
+          coupon_code?: string | null
+          coupon_id?: string | null
           customer_note?: string | null
           discount_total?: number
           district?: string
@@ -544,6 +595,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_profile_id_fkey"
             columns: ["profile_id"]
