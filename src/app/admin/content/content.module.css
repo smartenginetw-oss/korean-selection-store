@@ -1,0 +1,13 @@
+.grid { display: grid; gap: 16px; }
+.heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+.heading h2 { margin: 5px 0 0; font-size: 1.05rem; }
+.form { display: grid; gap: 14px; }
+.form label:not(.checkbox) { display: grid; gap: 7px; color: var(--color-text-secondary); font-size: .78rem; }
+.form textarea { min-height: 150px; resize: vertical; line-height: 1.65; }
+.actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.checkbox { display: inline-flex; align-items: center; gap: 8px; color: var(--color-text-secondary); font-size: .78rem; cursor: pointer; }
+.checkbox input { width: 17px; height: 17px; accent-color: var(--color-primary); }
+.updated { color: var(--color-text-muted); font-size: .7rem; }
+.error { margin-bottom: 18px; padding: 12px 14px; border-radius: var(--radius-md); color: #8b4136; background: color-mix(in srgb, #8b4136 8%, var(--color-surface)); border: 1px solid color-mix(in srgb, #8b4136 30%, var(--color-border)); font-size: .82rem; }
+@media (min-width: 860px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+

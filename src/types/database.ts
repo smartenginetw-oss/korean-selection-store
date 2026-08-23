@@ -1044,6 +1044,33 @@ export type Database = {
         }
         Relationships: []
       }
+      store_pages: {
+        Row: {
+          body: string
+          is_published: boolean
+          slug: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body: string
+          is_published?: boolean
+          slug: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body?: string
+          is_published?: boolean
+          slug?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       shipments: {
         Row: {
           carrier: string
