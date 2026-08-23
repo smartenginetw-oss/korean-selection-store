@@ -31,6 +31,8 @@ export type CreateProductResult =
   | { ok: true; product: { id: string; slug: string; name: string } }
   | { ok: false; message: string };
 
+export type UpdateProductResult = CreateProductResult;
+
 const ProductImagesSchema = z.object({
   productId: z.string().uuid(),
   images: z.array(z.object({
@@ -76,6 +78,45 @@ export async function createProductAction(payload: unknown): Promise<CreateProdu
   revalidatePath("/admin/products");
   revalidatePath("/products");
   if (parsed.data.status === "active") revalidatePath(`/products/${product.slug}`);
+  return { ok: true, product: { id: product.id, slug: product.slug, name: product.name } };
+}
+
+export async function updateProductAction(productId: string, payload: unknown): Promise<UpdateProductResult> {
+  await requireAdmin();
+
+  const parsedId = z.string().uuid().safeParse(productId);
+  const parsed = ProductDraftSchema.safeParse(payload);
+  if (!parsedId.success || !parsed.success) {
+    return { ok: false, message: "商品資料格式不正確，請確認名稱、價格、規格與庫存。" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("update_admin_product", {
+    p_product_id: parsedId.data,
+    p_payload: {
+      ...parsed.data,
+      originalPrice: parsed.data.originalPrice ?? null,
+      costPrice: parsed.data.costPrice ?? null,
+    },
+  });
+
+  if (error || !data || typeof data !== "object" || Array.isArray(data)) {
+    console.error("[admin/products] update failed", error?.message ?? "empty response");
+    if (error?.code === "23505") return { ok: false, message: "Slug 或 SKU 已存在，請換一組再儲存。" };
+    if (error?.code === "42501") return { ok: false, message: "目前帳號沒有商品管理權限。" };
+    if (error?.code === "P0002") return { ok: false, message: "找不到這項商品。" };
+    if (error?.code === "22023") return { ok: false, message: error.message.includes("reserved") ? "庫存不可低於目前已保留數量。" : "商品資料驗證失敗，請確認規格與庫存。" };
+    return { ok: false, message: "商品尚未更新，請稍後再試。" };
+  }
+
+  const product = data as { id?: unknown; slug?: unknown; name?: unknown };
+  if (typeof product.id !== "string" || typeof product.slug !== "string" || typeof product.name !== "string") {
+    return { ok: false, message: "商品回應格式不正確，請稍後再試。" };
+  }
+
+  revalidatePath("/admin/products");
+  revalidatePath("/products");
+  revalidatePath(`/products/${product.slug}`);
   return { ok: true, product: { id: product.id, slug: product.slug, name: product.name } };
 }
 
@@ -128,4 +169,45 @@ export async function registerProductImagesAction(payload: unknown): Promise<Reg
   revalidatePath("/products");
   revalidatePath("/products/" + product.slug);
   return { ok: true, count: rows.length };
+}
+
+const DeleteProductImageSchema = z.object({ productId: z.string().uuid(), imageId: z.string().uuid() });
+
+export async function deleteProductImageAction(payload: unknown): Promise<{ ok: true } | { ok: false; message: string }> {
+  await requireAdmin();
+  const parsed = DeleteProductImageSchema.safeParse(payload);
+  if (!parsed.success) return { ok: false, message: "圖片資料格式不正確。" };
+
+  const supabase = await createClient();
+  const { data: image, error: imageError } = await supabase
+    .from("product_images")
+    .select("id,product_id,storage_path,is_primary")
+    .eq("id", parsed.data.imageId)
+    .eq("product_id", parsed.data.productId)
+    .maybeSingle();
+  if (imageError || !image) return { ok: false, message: "找不到這張商品圖片。" };
+
+  const { error: deleteError } = await supabase.from("product_images").delete().eq("id", image.id);
+  if (deleteError) {
+    console.error("[admin/products] image delete failed", deleteError.message);
+    return { ok: false, message: "圖片目前無法刪除，請稍後再試。" };
+  }
+
+  await supabase.storage.from("product-images").remove([image.storage_path]);
+  if (image.is_primary) {
+    const { data: nextImage } = await supabase
+      .from("product_images")
+      .select("id")
+      .eq("product_id", parsed.data.productId)
+      .order("sort_order")
+      .limit(1)
+      .maybeSingle();
+    if (nextImage) await supabase.from("product_images").update({ is_primary: true }).eq("id", nextImage.id);
+  }
+
+  const { data: product } = await supabase.from("products").select("slug").eq("id", parsed.data.productId).maybeSingle();
+  revalidatePath("/admin/products");
+  revalidatePath("/products");
+  if (product?.slug) revalidatePath(`/products/${product.slug}`);
+  return { ok: true };
 }

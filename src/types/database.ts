@@ -1060,6 +1060,10 @@ export type Database = {
         Args: { p_payload: Json }
         Returns: Json
       }
+      update_admin_product: {
+        Args: { p_product_id: string; p_payload: Json }
+        Returns: Json
+      }
       update_admin_order_fulfillment: {
         Args: { p_payload: Json }
         Returns: Json

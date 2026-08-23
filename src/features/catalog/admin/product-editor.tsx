@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-import { createProductAction, registerProductImagesAction } from "@/app/admin/products/actions";
+import { createProductAction, deleteProductImageAction, registerProductImagesAction, updateProductAction } from "@/app/admin/products/actions";
 import type { ProductCategory } from "@/features/catalog/data";
+import type { AdminProductEditorData } from "./server";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./product-editor.module.css";
 
 type FulfillmentMode = "in_stock" | "preorder";
-type DraftVariant = { key: string; color: string; size: string; sku: string; stock: number; fulfillmentMode: FulfillmentMode };
+type DraftOption = { name: string; values: string[] };
+type DraftVariant = { key: string; id?: string; sku: string; stock: number; fulfillmentMode: FulfillmentMode; options: Record<string, string> };
 
 async function uploadProductImages(productId: string, productName: string, files: File[]) {
   const supabase = createClient();
@@ -52,23 +55,30 @@ const categoryOptions: { value: ProductCategory; label: string }[] = [
   { value: "accessories", label: "配件" },
 ];
 
-export function ProductEditor() {
+function combinationKey(options: Record<string, string>) {
+  return Object.entries(options).sort(([left], [right]) => left.localeCompare(right)).map(([name, value]) => `${name}:${value}`).join("|");
+}
+
+export function ProductEditor({ initialProduct }: { initialProduct?: AdminProductEditorData }) {
   const router = useRouter();
-  const [name, setName] = useState("韓國針織上衣");
-  const [slug, setSlug] = useState("soft-oversize-knit");
-  const [description, setDescription] = useState("柔軟細緻的針織面料，帶有恰好的寬鬆輪廓。");
-  const [category, setCategory] = useState<ProductCategory>("tops");
-  const [status, setStatus] = useState<"draft" | "active">("draft");
-  const [salePrice, setSalePrice] = useState("890");
-  const [originalPrice, setOriginalPrice] = useState("1080");
-  const [costPrice, setCostPrice] = useState("450");
-  const [colors, setColors] = useState(["奶茶", "灰色"]);
-  const [sizes, setSizes] = useState(["S", "M", "L"]);
+  const [name, setName] = useState(initialProduct?.name ?? "韓國針織上衣");
+  const [slug, setSlug] = useState(initialProduct?.slug ?? "soft-oversize-knit");
+  const [description, setDescription] = useState(initialProduct?.description ?? "柔軟細緻的針織面料，帶有恰好的寬鬆輪廓。");
+  const [category, setCategory] = useState<ProductCategory>(initialProduct?.category ?? "tops");
+  const [status, setStatus] = useState<"draft" | "active">(initialProduct?.status ?? "draft");
+  const [salePrice, setSalePrice] = useState(String(initialProduct?.salePrice ?? 890));
+  const [originalPrice, setOriginalPrice] = useState(initialProduct?.originalPrice == null ? "" : String(initialProduct.originalPrice));
+  const [costPrice, setCostPrice] = useState(initialProduct?.costPrice == null ? "" : String(initialProduct.costPrice));
+  const [options, setOptions] = useState<DraftOption[]>(initialProduct?.options.length ? initialProduct.options : [{ name: "顏色", values: ["奶茶", "灰色"] }, { name: "尺寸", values: ["S", "M", "L"] }]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [generated, setGenerated] = useState<DraftVariant[]>([]);
+  const [existingImages, setExistingImages] = useState(initialProduct?.images ?? []);
+  const [generated, setGenerated] = useState<DraftVariant[]>(initialProduct?.variants.map((variant) => ({ ...variant, key: combinationKey(variant.options) })) ?? []);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "info"; text: string } | null>(null);
-  const combinations = useMemo(() => colors.flatMap((color) => sizes.map((size) => ({ color, size }))), [colors, sizes]);
+  const combinations = useMemo(() => {
+    if (!options.length || options.some((option) => !option.name.trim() || !option.values.length)) return [];
+    return options.reduce<Record<string, string>[]>((current, option) => current.flatMap((combination) => option.values.map((value) => ({ ...combination, [option.name]: value }))), [{}]);
+  }, [options]);
   const imagePreviews = useMemo(() => imageFiles.map((file) => ({ file, url: URL.createObjectURL(file) })), [imageFiles]);
 
   useEffect(() => () => {
@@ -76,9 +86,9 @@ export function ProductEditor() {
   }, [imagePreviews]);
 
   function generateVariants() {
-    setGenerated((current) => combinations.map(({ color, size }, index) => {
-      const key = `${color}:${size}`;
-      return current.find((item) => item.key === key) ?? { key, color, size, sku: `GYEOT-${String(index + 1).padStart(2, "0")}`, stock: 3, fulfillmentMode: "in_stock" };
+    setGenerated((current) => combinations.map((optionValues, index) => {
+      const key = combinationKey(optionValues);
+      return current.find((item) => item.key === key) ?? { key, sku: `GYEOT-${String(index + 1).padStart(2, "0")}`, stock: 3, fulfillmentMode: "in_stock", options: optionValues };
     }));
     setMessage(null);
   }
@@ -91,7 +101,7 @@ export function ProductEditor() {
 
     setPending(true);
     setMessage(null);
-    const result = await createProductAction({
+    const payload = {
       name,
       slug,
       description,
@@ -100,9 +110,10 @@ export function ProductEditor() {
       salePrice: Number(salePrice),
       originalPrice: originalPrice ? Number(originalPrice) : null,
       costPrice: costPrice ? Number(costPrice) : null,
-      options: [{ name: "顏色", values: colors }, { name: "尺寸", values: sizes }],
-      variants: generated.map((variant) => ({ sku: variant.sku, stock: variant.stock, fulfillmentMode: variant.fulfillmentMode, options: { 顏色: variant.color, 尺寸: variant.size } })),
-    });
+      options,
+      variants: generated.map((variant) => ({ id: variant.id, sku: variant.sku, stock: variant.stock, fulfillmentMode: variant.fulfillmentMode, options: variant.options })),
+    };
+    const result = initialProduct ? await updateProductAction(initialProduct.id, payload) : await createProductAction(payload);
 
     if (!result.ok) {
       setMessage({ type: "error", text: result.message });
@@ -119,8 +130,21 @@ export function ProductEditor() {
       }
     }
 
-    router.push(`/admin/products?created=${encodeURIComponent(result.product.slug)}${imageFiles.length ? `&images=${imageFiles.length}` : ""}`);
+    router.push(`/admin/products?${initialProduct ? "updated" : "created"}=${encodeURIComponent(result.product.slug)}${imageFiles.length ? `&images=${imageFiles.length}` : ""}`);
     router.refresh();
+  }
+
+  async function handleDeleteExistingImage(imageId: string) {
+    if (!initialProduct) return;
+    setPending(true);
+    const result = await deleteProductImageAction({ productId: initialProduct.id, imageId });
+    if (result.ok) {
+      setExistingImages((current) => current.filter((image) => image.id !== imageId));
+      setMessage({ type: "info", text: "商品圖片已刪除。" });
+    } else {
+      setMessage({ type: "error", text: result.message });
+    }
+    setPending(false);
   }
 
   const margin = Number(salePrice) - Number(costPrice || 0);
@@ -134,10 +158,10 @@ export function ProductEditor() {
         <div className="field"><label htmlFor="description">商品描述</label><textarea className="input" id="description" rows={5} value={description} onChange={(event) => setDescription(event.target.value)} /></div>
         <div className="field"><label htmlFor="product-category">分類</label><select className="input" id="product-category" value={category} onChange={(event) => setCategory(event.target.value as ProductCategory)}>{categoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
       </div></section>
-      <section><div className={styles.sectionHead}><div><h2>商品圖片</h2><p className={styles.sectionHint}>第一張會作為商品主圖，可直接預覽與移除。</p></div><label className={styles.uploadButton + " button button-secondary button-small"} htmlFor="product-images">＋ 選擇照片<input className={styles.fileInput} id="product-images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple onChange={(event) => { const files = Array.from(event.target.files ?? []); const allowed = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]); const valid = files.filter((file) => allowed.has(file.type) && file.size <= 5 * 1024 * 1024); setImageFiles(valid.slice(0, 8)); setMessage(valid.length === files.length && files.length <= 8 ? null : { type: "error", text: "僅接受 JPG、PNG、WebP、AVIF；單張上限 5 MB，最多 8 張。" }); event.currentTarget.value = ""; }} /></label></div>{imagePreviews.length > 0 ? <div className={styles.imageGrid}>{imagePreviews.map(({ file, url }, imageIndex) => <div className={styles.imageCard} key={file.name + file.size + file.lastModified}><img src={url} alt={`${name} 商品圖片 ${imageIndex + 1}`} /><span className={styles.imageLabel}>{imageIndex === 0 ? "主圖" : `第 ${imageIndex + 1} 張`}</span><button className={styles.removeImage} type="button" aria-label={`移除第 ${imageIndex + 1} 張圖片`} onClick={() => setImageFiles((current) => current.filter((_, index) => index !== imageIndex))}>×</button></div>)}</div> : <label className={styles.compactDropzone} htmlFor="product-images"><span>尚未選擇照片</span><small>點此選擇商品圖片，最多 8 張</small></label>}<p className={styles.helper}>可上傳 JPG、PNG、WebP 或 AVIF；單張上限 5 MB，最多 8 張。</p></section>
+      <section><div className={styles.sectionHead}><div><h2>商品圖片</h2><p className={styles.sectionHint}>第一張會作為商品主圖，可直接預覽與移除。</p></div><label className={styles.uploadButton + " button button-secondary button-small"} htmlFor="product-images">＋ 選擇照片<input className={styles.fileInput} id="product-images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple onChange={(event) => { const files = Array.from(event.target.files ?? []); const allowed = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]); const valid = files.filter((file) => allowed.has(file.type) && file.size <= 5 * 1024 * 1024); setImageFiles(valid.slice(0, 8)); setMessage(valid.length === files.length && files.length <= 8 ? null : { type: "error", text: "僅接受 JPG、PNG、WebP、AVIF；單張上限 5 MB，最多 8 張。" }); event.currentTarget.value = ""; }} /></label></div>{existingImages.length > 0 && <div className={styles.imageGrid}>{existingImages.map((image) => <div className={styles.imageCard} key={image.id}><Image src={image.url} alt={`${name} 已上傳商品圖片`} width={320} height={320} unoptimized /><span className={styles.imageLabel}>{image.isPrimary ? "主圖" : "已上傳"}</span><button className={styles.removeImage} type="button" aria-label="刪除已上傳商品圖片" onClick={() => handleDeleteExistingImage(image.id)} disabled={pending}>×</button></div>)}</div>}{imagePreviews.length > 0 ? <div className={styles.imageGrid}>{imagePreviews.map(({ file, url }, imageIndex) => <div className={styles.imageCard} key={file.name + file.size + file.lastModified}><Image src={url} alt={`${name} 新增商品圖片 ${imageIndex + 1}`} width={320} height={320} unoptimized /><span className={styles.imageLabel}>{existingImages.length === 0 && imageIndex === 0 ? "主圖" : "待上傳"}</span><button className={styles.removeImage} type="button" aria-label={`移除第 ${imageIndex + 1} 張新增圖片`} onClick={() => setImageFiles((current) => current.filter((_, index) => index !== imageIndex))}>×</button></div>)}</div> : existingImages.length === 0 && <label className={styles.compactDropzone} htmlFor="product-images"><span>尚未選擇照片</span><small>點此選擇商品圖片，最多 8 張</small></label>}<p className={styles.helper}>可上傳 JPG、PNG、WebP 或 AVIF；單張上限 5 MB，最多 8 張。</p></section>
       <section><div className={styles.sectionHead}><h2>通用規格</h2><button className="button button-secondary button-small" type="button" onClick={generateVariants}>產生 Variant</button></div>
-        <OptionEditor label="顏色" values={colors} setValues={setColors} /><OptionEditor label="尺寸" values={sizes} setValues={setSizes} />
-        {generated.length > 0 && <div className={styles.variantWrap}><table><thead><tr><th>規格</th><th>SKU</th><th>模式</th><th>庫存</th></tr></thead><tbody>{generated.map((variant) => <tr key={variant.key}><td>{variant.color}／{variant.size}</td><td><input className="input" value={variant.sku} onChange={(event) => setGenerated((current) => current.map((item) => item.key === variant.key ? { ...item, sku: event.target.value } : item))} /></td><td><select className="input" value={variant.fulfillmentMode} onChange={(event) => setGenerated((current) => current.map((item) => item.key === variant.key ? { ...item, fulfillmentMode: event.target.value as FulfillmentMode } : item))}><option value="in_stock">現貨</option><option value="preorder">預購</option></select></td><td><input className="input" type="number" min="0" value={variant.stock} onChange={(event) => setGenerated((current) => current.map((item) => item.key === variant.key ? { ...item, stock: Number(event.target.value) } : item))} /></td></tr>)}</tbody></table></div>}
+        {options.map((option, index) => <OptionEditor key={`${option.name}-${index}`} option={option} onChange={(nextOption) => setOptions((current) => current.map((item, itemIndex) => itemIndex === index ? nextOption : item))} onRemove={options.length > 1 ? () => setOptions((current) => current.filter((_, itemIndex) => itemIndex !== index)) : undefined} />)}<button className="button button-secondary button-small" type="button" onClick={() => setOptions((current) => [...current, { name: `規格 ${current.length + 1}`, values: ["選項 1"] }])}>＋ 新增規格</button>
+        {generated.length > 0 && <div className={styles.variantWrap}><table><thead><tr><th>規格</th><th>SKU</th><th>模式</th><th>庫存</th></tr></thead><tbody>{generated.map((variant) => <tr key={variant.key}><td>{Object.values(variant.options).join("／")}</td><td><input className="input" value={variant.sku} onChange={(event) => setGenerated((current) => current.map((item) => item.key === variant.key ? { ...item, sku: event.target.value } : item))} /></td><td><select className="input" value={variant.fulfillmentMode} onChange={(event) => setGenerated((current) => current.map((item) => item.key === variant.key ? { ...item, fulfillmentMode: event.target.value as FulfillmentMode } : item))}><option value="in_stock">現貨</option><option value="preorder">預購</option></select></td><td><input className="input" type="number" min="0" value={variant.stock} onChange={(event) => setGenerated((current) => current.map((item) => item.key === variant.key ? { ...item, stock: Number(event.target.value) } : item))} /></td></tr>)}</tbody></table></div>}
       </section>
     </div>
     <aside className={styles.side}>
@@ -149,7 +173,7 @@ export function ProductEditor() {
   </div>;
 }
 
-function OptionEditor({ label, values, setValues }: { label: string; values: string[]; setValues: React.Dispatch<React.SetStateAction<string[]>> }) {
+function OptionEditor({ option, onChange, onRemove }: { option: DraftOption; onChange: (option: DraftOption) => void; onRemove?: () => void }) {
   const [draft, setDraft] = useState("");
-  return <div className={styles.option}><strong>{label}</strong><div className={styles.chips}>{values.map((value) => <button type="button" key={value} onClick={() => setValues((current) => current.filter((item) => item !== value))}>{value} ×</button>)}</div><div className={styles.addOption}><input className="input" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`新增${label}`} /><button className="button button-secondary button-small" type="button" onClick={() => { const value = draft.trim(); if (value && !values.includes(value)) setValues((current) => [...current, value]); setDraft(""); }}>加入</button></div></div>;
+  return <div className={styles.option}><div className={styles.optionHead}><input className="input" value={option.name} onChange={(event) => onChange({ ...option, name: event.target.value })} aria-label="規格名稱" /><button className={styles.removeOption} type="button" onClick={onRemove} disabled={!onRemove}>移除規格</button></div><div className={styles.chips}>{option.values.map((value) => <button type="button" key={value} onClick={() => onChange({ ...option, values: option.values.filter((item) => item !== value) })}>{value} ×</button>)}</div><div className={styles.addOption}><input className="input" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={`新增${option.name || "規格"}`} /><button className="button button-secondary button-small" type="button" onClick={() => { const value = draft.trim(); if (value && !option.values.includes(value)) onChange({ ...option, values: [...option.values, value] }); setDraft(""); }}>加入</button></div></div>;
 }
