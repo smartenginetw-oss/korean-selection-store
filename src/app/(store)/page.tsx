@@ -25,6 +25,5 @@ export default async function HomePage() {
 
     <section className="section"><div className={`container ${styles.story}`}><div className={styles.storyArt}><span>01</span><span>SELECTED<br />WITH CALM</span></div><div className={styles.storyCopy}><div className="eyebrow">Our selection</div><h2 className="section-title serif">我們相信質感<br />不需要大聲說話。</h2><p>從版型、面料到穿著情境，挑選能在工作、週末與旅途中反覆出場的男裝。</p><Link className="button button-secondary" href="/about">認識 GYEOT</Link></div></div></section>
 
-    <section className={styles.newsletter}><div className="container"><div><div className="eyebrow">Stay close</div><h2 className="serif">訂閱 GYEOT 選品電子報</h2><p>新品、預購到貨與穿搭靈感，安靜地送到你的信箱。</p></div><form className={styles.newsletterForm}><label className={styles.srOnly} htmlFor="newsletter-email">Email</label><input className="input" id="newsletter-email" type="email" placeholder="你的 Email" /><button className="button button-primary" type="button">立即訂閱</button></form></div></section>
   </>;
 }
