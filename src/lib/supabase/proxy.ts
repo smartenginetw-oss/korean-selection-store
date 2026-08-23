@@ -8,6 +8,22 @@ import type { Database } from "@/types/database";
  * Full authorization is repeated in the admin layout and server actions.
  */
 export async function updateSession(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const appMode = process.env.APP_MODE;
+
+  // Store and admin are deployed as separate Vercel projects. Keep a local
+  // unset APP_MODE permissive so the same checkout can still be developed
+  // locally without maintaining two copies of the repository.
+  if (appMode === "admin" && pathname === "/login") {
+    return redirectToAdminLogin(request);
+  }
+  if (appMode === "admin" && pathname !== "/admin-login" && !pathname.startsWith("/admin")) {
+    return redirectToPath(request, "/admin");
+  }
+  if (appMode === "store" && (pathname === "/admin-login" || pathname.startsWith("/admin"))) {
+    return redirectToPath(request, "/");
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient<Database>(
@@ -28,8 +44,6 @@ export async function updateSession(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
-  const pathname = request.nextUrl.pathname;
-
   if (pathname.startsWith("/admin")) {
     if (!user) {
       return redirectToLogin(request);
@@ -53,8 +67,16 @@ export async function updateSession(request: NextRequest) {
 }
 
 function redirectToLogin(request: NextRequest) {
+  return redirectToPath(request, "/admin-login", `?next=${encodeURIComponent(request.nextUrl.pathname)}`);
+}
+
+function redirectToAdminLogin(request: NextRequest) {
+  return redirectToPath(request, "/admin-login");
+}
+
+function redirectToPath(request: NextRequest, pathname: string, search = "") {
   const url = request.nextUrl.clone();
-  url.pathname = "/admin-login";
-  url.search = `?next=${encodeURIComponent(request.nextUrl.pathname)}`;
+  url.pathname = pathname;
+  url.search = search;
   return NextResponse.redirect(url);
 }
