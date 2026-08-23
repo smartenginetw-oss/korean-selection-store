@@ -47,7 +47,7 @@ function optionsLabel(options: Record<string, string>) {
 }
 
 function actorLabel(value: string) {
-  return value === "admin" ? "管理員" : value === "customer" ? "顧客" : "系統";
+  return value === "admin" ? "老闆" : value === "customer" ? "顧客" : "系統";
 }
 
 export default async function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {

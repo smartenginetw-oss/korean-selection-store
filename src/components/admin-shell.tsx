@@ -19,7 +19,7 @@ export function AdminShell({ children, email }: { children: React.ReactNode; ema
       <header className={styles.header}>
         <div><span className="badge badge-preorder">PREVIEW</span></div>
         <div className={styles.adminGroup}>
-          <span className={styles.admin}>{email ?? "管理員"}</span>
+          <span className={styles.admin}>{email ?? "老闆"}</span>
           <form action={signOutAdmin}><button className={styles.logout} type="submit">登出</button></form>
         </div>
       </header>

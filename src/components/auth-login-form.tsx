@@ -41,14 +41,14 @@ export function AuthLoginForm({ audience, nextPath }: { audience: Audience; next
 
     if (isAdmin && role?.role !== "admin") {
       await supabase.auth.signOut();
-      setErrorMessage("這個帳號沒有後台權限，請使用管理員帳號登入。");
+      setErrorMessage("這個帳號沒有後台權限，請使用老闆帳號登入。");
       setPending(false);
       return;
     }
 
     if (!isAdmin && role?.role === "admin") {
       await supabase.auth.signOut();
-      setErrorMessage("這是管理員帳號，請改由後台登入入口進入。");
+      setErrorMessage("這是老闆帳號，請改由後台登入入口進入。");
       setPending(false);
       return;
     }
@@ -67,6 +67,6 @@ export function AuthLoginForm({ audience, nextPath }: { audience: Audience; next
       <input className="input" id={`${audience}-login-password`} name="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required minLength={6} />
     </div>
     {errorMessage && <div className={styles.error} role="alert">{errorMessage}</div>}
-    <button className="button button-primary" type="submit" disabled={pending}>{pending ? "登入中…" : isAdmin ? "登入管理後台" : "登入會員帳號"}</button>
+    <button className="button button-primary" type="submit" disabled={pending}>{pending ? "登入中…" : isAdmin ? "登入老闆後台" : "登入會員帳號"}</button>
   </form>;
 }

@@ -13,7 +13,7 @@ npm run dev
 
 ## 安全邊界
 
-- 商品公開讀取與 Admin／顧客私人資料分離。
+- 商品公開讀取與後台／顧客私人資料分離。
 - 價格、折扣、庫存、訂單總額及付款狀態由 Server 驗證。
 - 正式環境不得啟用 Test Payment Adapter。
 - Migration 位於 `supabase/migrations`，正式連線前需先審查並執行 RLS 測試。
@@ -30,7 +30,7 @@ npm run dev
 ## 登入入口
 
 - 商城會員登入：`/login`；訪客不需登入即可結帳。
-- 管理員／員工後台登入：`/admin-login`；後台路由 `/admin/*` 仍由 Server-side `admin` 角色保護。
+- 老闆／員工後台登入：`/admin-login`；後台路由 `/admin/*` 仍由 Server-side `admin` 角色保護。
 - 目前員工權限採個別 Supabase Auth 帳號，不共用帳密；V1 的 `admin` 角色是完整後台權限，細分職務權限會在員工流程確定後再加入。
 
 ## Vercel 部署拓撲
