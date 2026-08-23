@@ -24,15 +24,22 @@ export default async function AccountPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=%2Faccount");
 
-  const [profileResult, addressResult, ordersResult] = await Promise.all([
+  const [profileResult, addressResult, ordersResult, favoritesResult] = await Promise.all([
     supabase.from("profiles").select("display_name, phone").eq("id", user.id).maybeSingle(),
     supabase.from("addresses").select("id, recipient_name, phone, postal_code, city, district, address_line, is_default").eq("profile_id", user.id).order("is_default", { ascending: false }).order("updated_at", { ascending: false }),
     supabase.from("orders").select("id, order_number, created_at, grand_total, currency, payment_status, fulfillment_status, order_status, stock_mode").order("created_at", { ascending: false }).limit(30),
+    supabase.from("favorites").select("product_id, created_at").order("created_at", { ascending: false }).limit(60),
   ]);
 
   const profile = profileResult.data;
   const orders = ordersResult.data ?? [];
   const addresses = addressResult.data ?? [];
+  const favoriteRows = favoritesResult.data ?? [];
+  const favoriteProductIds = favoriteRows.map((favorite) => favorite.product_id);
+  const favoriteProductsResult = favoriteProductIds.length
+    ? await supabase.from("products").select("id, name, slug, sale_price").in("id", favoriteProductIds)
+    : { data: [], error: null };
+  const favoriteProducts = new Map((favoriteProductsResult.data ?? []).map((product) => [product.id, product]));
   const displayName = profile?.display_name || user.user_metadata?.display_name || "GYEOT 會員";
 
   return <div className={`container ${styles.page}`}>
@@ -67,6 +74,15 @@ export default async function AccountPage() {
           <div className={styles.orderMain}><strong>{order.order_number}</strong><span>{formatDate(order.created_at)} · {fulfillmentLabels[order.fulfillment_status] ?? order.fulfillment_status}</span></div>
           <div className={styles.orderAside}><strong>{formatTwd(order.grand_total)}</strong><span>{paymentLabels[order.payment_status] ?? order.payment_status}</span></div>
         </Link>)}</div> : <p className={styles.empty}>目前還沒有綁定到這個會員的訂單；訪客結帳仍可正常完成。</p>}
+      </section>
+
+      <section className={`${styles.panel} ${styles.favorites}`} aria-labelledby="favorites-heading">
+        <h2 id="favorites-heading">收藏清單</h2>
+        {favoriteRows.length ? <div className={styles.favoriteList}>{favoriteRows.map((favorite) => {
+          const product = favoriteProducts.get(favorite.product_id);
+          return product ? <Link className={styles.favorite} href={`/products/${product.slug}`} key={favorite.product_id}><strong>{product.name}</strong><span>{formatTwd(product.sale_price)} · 查看商品 →</span></Link> : null;
+        })}</div> : <p className={styles.empty}>還沒有收藏商品。看到喜歡的款式，可以在商品卡或商品頁按下愛心。</p>}
+        {favoriteRows.length > 0 && !favoriteProducts.size && <p className={styles.empty}>收藏的商品目前已下架或無法公開顯示。</p>}
       </section>
     </div>
   </div>;
