@@ -1220,6 +1220,10 @@ export type Database = {
         Args: { p_idempotency_key: string; p_payload: Json }
         Returns: Json
       }
+      create_checkout_order_for_member: {
+        Args: { p_idempotency_key: string; p_payload: Json; p_profile_id: string | null }
+        Returns: Json
+      }
       preview_coupon_discount: {
         Args: { p_payload: Json }
         Returns: Json

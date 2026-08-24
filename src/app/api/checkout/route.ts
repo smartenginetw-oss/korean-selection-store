@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 const CheckoutRequestSchema = z.object({
   idempotencyKey: z.string().min(16).max(128).regex(/^[a-zA-Z0-9:_-]+$/),
@@ -34,7 +35,7 @@ function mapCheckoutError(code?: string, fallbackStatus = 500, detail?: string) 
   return errorResponse("目前無法建立訂單，請稍後再試。", fallbackStatus, "checkout_failed");
 }
 
-async function createCheckoutViaEdgeFunction(payload: z.infer<typeof CheckoutRequestSchema>) {
+async function createCheckoutViaEdgeFunction(payload: z.infer<typeof CheckoutRequestSchema>, accessToken?: string) {
   const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   const functionUrl = process.env.SUPABASE_CHECKOUT_FUNCTION_URL || (baseUrl ? `${baseUrl}/functions/v1/checkout` : undefined);
@@ -51,6 +52,7 @@ async function createCheckoutViaEdgeFunction(payload: z.infer<typeof CheckoutReq
         "content-type": "application/json",
         // Publishable keys belong in apikey only. New Supabase keys are not JWTs.
         apikey: publishableKey,
+        ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
       },
       body: JSON.stringify(payload),
       cache: "no-store",
@@ -82,18 +84,30 @@ export async function POST(request: Request) {
     return errorResponse("結帳資料格式不正確，請重新確認。", 400, "invalid_request");
   }
 
+  // Resolve the member session on the server. The Edge Function validates the
+  // forwarded token again; guests continue through the same checkout path with
+  // no member identity attached.
+  const supabase = await createClient();
+  const [{ data: { user } }, { data: { session } }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.auth.getSession(),
+  ]);
+  const memberProfileId = user?.id ?? null;
+  const accessToken = session?.access_token;
+
   // Prefer the local server-role path when explicitly configured. Otherwise
   // use the deployed Edge Function, whose server-only key never reaches Next
   // or the browser.
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return createCheckoutViaEdgeFunction(parsed);
+    return createCheckoutViaEdgeFunction(parsed, accessToken);
   }
 
   try {
     const admin = createAdminClient();
-    const { data, error } = await admin.rpc("create_checkout_order", {
+    const { data, error } = await admin.rpc("create_checkout_order_for_member", {
       p_payload: parsed,
       p_idempotency_key: parsed.idempotencyKey,
+      p_profile_id: memberProfileId,
     });
 
     if (error) {

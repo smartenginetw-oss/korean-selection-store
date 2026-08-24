@@ -120,7 +120,35 @@ function databaseKey(): { key: string; isNewSecret: boolean } | null {
   return legacy ? { key: legacy, isNewSecret: false } : null;
 }
 
-async function invokeCheckout(payload: CheckoutPayload) {
+async function resolveAuthenticatedProfileId(request: Request): Promise<{ profileId: string | null; error?: Response }> {
+  const authorization = request.headers.get("authorization")?.trim();
+  if (!authorization) return { profileId: null };
+  if (!/^Bearer\s+\S+$/i.test(authorization)) {
+    return { profileId: null, error: errorResponse("結帳登入狀態無效，請重新登入。", 401, "unauthorized") };
+  }
+
+  const baseUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "");
+  const secret = databaseKey();
+  if (!baseUrl || !secret) {
+    return { profileId: null, error: errorResponse("Checkout server 尚未設定安全金鑰。", 503, "checkout_not_configured") };
+  }
+
+  try {
+    const response = await fetch(`${baseUrl}/auth/v1/user`, {
+      headers: { apikey: secret.key, authorization },
+    });
+    if (!response.ok) return { profileId: null, error: errorResponse("結帳登入狀態無效，請重新登入。", 401, "unauthorized") };
+    const body = await response.json() as { id?: unknown };
+    if (typeof body.id !== "string" || !UUID.test(body.id)) {
+      return { profileId: null, error: errorResponse("結帳登入狀態無效，請重新登入。", 401, "unauthorized") };
+    }
+    return { profileId: body.id };
+  } catch {
+    return { profileId: null, error: errorResponse("目前無法驗證會員登入狀態，請稍後再試。", 503, "checkout_unavailable") };
+  }
+}
+
+async function invokeCheckout(payload: CheckoutPayload, profileId: string | null) {
   const baseUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "");
   const secret = databaseKey();
   if (!baseUrl || !secret) return errorResponse("Checkout server 尚未設定安全金鑰。", 503, "checkout_not_configured");
@@ -133,10 +161,10 @@ async function invokeCheckout(payload: CheckoutPayload) {
   // must stay on apikey only because they are deliberately not JWTs.
   if (!secret.isNewSecret) requestHeaders.authorization = `Bearer ${secret.key}`;
 
-  const response = await fetch(`${baseUrl}/rest/v1/rpc/create_checkout_order`, {
+  const response = await fetch(`${baseUrl}/rest/v1/rpc/create_checkout_order_for_member`, {
     method: "POST",
     headers: requestHeaders,
-    body: JSON.stringify({ p_payload: payload, p_idempotency_key: payload.idempotencyKey }),
+    body: JSON.stringify({ p_payload: payload, p_idempotency_key: payload.idempotencyKey, p_profile_id: profileId }),
   });
 
   let body: unknown = null;
@@ -219,7 +247,9 @@ Deno.serve(async (request: Request) => {
   if (!validatePayload(payload)) return errorResponse("結帳資料格式不正確，請重新確認。", 400, "invalid_request");
 
   try {
-    return await invokeCheckout(payload);
+    const identity = await resolveAuthenticatedProfileId(request);
+    if (identity.error) return identity.error;
+    return await invokeCheckout(payload, identity.profileId);
   } catch (error) {
     console.error("[checkout] unexpected function error", error instanceof Error ? error.message : "unknown error");
     return errorResponse("目前無法建立訂單，請稍後再試。", 502, "checkout_unavailable");
