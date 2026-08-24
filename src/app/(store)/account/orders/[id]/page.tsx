@@ -10,7 +10,24 @@ export const dynamic = "force-dynamic";
 
 const paymentLabels: Record<string, string> = { pending: "待付款", paid: "已付款", failed: "付款失敗", refunded: "已退款", partially_refunded: "部分退款" };
 const fulfillmentLabels: Record<string, string> = { unfulfilled: "待處理", awaiting_stock: "等待到貨", processing: "處理中", shipped: "已出貨", delivered: "已送達", cancelled: "已取消" };
-const timelineLabels: Record<string, string> = { order_created: "訂單已建立", payment_succeeded: "付款已完成", fulfillment_updated: "履約狀態更新", shipment_created: "出貨資訊已建立", order_cancelled: "訂單已取消", order_completed: "訂單已完成" };
+const timelineLabels: Record<string, string> = {
+  order_created: "訂單已建立",
+  checkout_created: "訂單已建立",
+  payment_succeeded: "付款已完成",
+  inventory_reserved: "庫存已保留",
+  fulfillment_updated: "履約狀態更新",
+  shipment_created: "出貨資訊已建立",
+  order_cancelled: "訂單已取消",
+  order_completed: "訂單已完成",
+};
+
+function formatTimelineNote(note: string | null) {
+  if (!note) return "";
+  if (note === "Test payment adapter confirmed the order.") return "測試付款已確認訂單。";
+  const inventoryMatch = note.match(/^Inventory held for (\d+) minutes\.$/);
+  if (inventoryMatch) return `庫存已保留 ${inventoryMatch[1]} 分鐘。`;
+  return note;
+}
 
 function formatTwd(value: number) {
   return new Intl.NumberFormat("zh-TW", { style: "currency", currency: "TWD", maximumFractionDigits: 0 }).format(value);
@@ -77,7 +94,7 @@ export default async function MemberOrderPage({ params }: { params: Promise<{ id
       <section className={`${styles.panel} ${styles.itemsPanel}`} aria-labelledby="items-heading"><h2 id="items-heading">商品明細</h2><div className={styles.items}>{items.map((item, index) => { const reorderItem = reorderItems[index]; return <div className={styles.item} key={`${item.sku}-${item.product_name}`}><div><h3>{item.product_name}</h3><p>{item.variant_name} · {item.sku} · 數量 {item.quantity}{optionText(item.selected_options) ? ` · ${optionText(item.selected_options)}` : ""}</p></div><div className={styles.itemAside}><strong>{formatTwd(item.line_total)}</strong>{reorderItem ? <ReorderButton item={reorderItem} /> : <span className={styles.unavailable}>商品或規格已下架</span>}</div></div>; })}</div>{!items.length && <p className={styles.empty}>商品明細目前無法讀取。</p>}<p className={styles.reorderHint}>再次購買會以目前商品價格與可售狀態加入購物車，結帳時仍會重新驗證庫存。</p></section>
       <section className={styles.panel} aria-labelledby="summary-heading"><h2 id="summary-heading">訂單摘要</h2><div className={styles.summary}><div className={styles.summaryRow}><span>付款狀態</span><strong>{paymentLabels[order.payment_status] ?? order.payment_status}</strong></div><div className={styles.summaryRow}><span>履約狀態</span><strong>{fulfillmentLabels[order.fulfillment_status] ?? order.fulfillment_status}</strong></div><div className={styles.summaryRow}><span>商品小計</span><strong>{formatTwd(order.subtotal)}</strong></div><div className={styles.summaryRow}><span>運費</span><strong>{formatTwd(order.shipping_total)}</strong></div><div className={styles.summaryRow}><span>訂單總額</span><strong>{formatTwd(order.grand_total)}</strong></div></div></section>
       <section className={styles.panel} aria-labelledby="delivery-heading"><h2 id="delivery-heading">配送資訊</h2><div className={styles.summary}><div className={styles.summaryRow}><span>配送方式</span><strong>{order.shipping_method === "home_delivery" ? "宅配（台灣）" : order.shipping_method}</strong></div><div className={styles.summaryRow}><span>收件人</span><strong>{order.recipient_name} · {order.phone}</strong></div><div className={styles.summaryRow}><span>宅配地址</span><strong>{order.postal_code} {order.city}{order.district}{order.address_line}</strong></div>{shipment && <div className={styles.summaryRow}><span>出貨資訊</span><strong>{shipment.carrier} · {shipment.tracking_number || "待填寫"}</strong></div>}</div></section>
-      <section className={styles.panel} aria-labelledby="timeline-heading"><h2 id="timeline-heading">訂單進度</h2>{timeline.length ? <div className={styles.timeline}>{timeline.map((event, index) => <div className={styles.event} key={`${event.created_at}-${index}`}><span className={styles.dot} aria-hidden="true" /><div><strong>{timelineLabels[event.event_type] ?? event.to_status ?? event.event_type}</strong><span>{formatDate(event.created_at)}{event.note ? ` · ${event.note}` : ""}</span></div></div>)}</div> : <p className={styles.empty}>尚未有可顯示的進度更新。</p>}</section>
+      <section className={styles.panel} aria-labelledby="timeline-heading"><h2 id="timeline-heading">訂單進度</h2>{timeline.length ? <div className={styles.timeline}>{timeline.map((event, index) => <div className={styles.event} key={`${event.created_at}-${index}`}><span className={styles.dot} aria-hidden="true" /><div><strong>{timelineLabels[event.event_type] ?? fulfillmentLabels[event.to_status ?? ""] ?? event.to_status ?? event.event_type}</strong><span>{formatDate(event.created_at)}{formatTimelineNote(event.note) ? ` · ${formatTimelineNote(event.note)}` : ""}</span></div></div>)}</div> : <p className={styles.empty}>尚未有可顯示的進度更新。</p>}</section>
     </div>
   </div>;
 }
