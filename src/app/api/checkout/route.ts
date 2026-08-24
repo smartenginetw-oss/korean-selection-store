@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 const CheckoutRequestSchema = z.object({
   idempotencyKey: z.string().min(16).max(128).regex(/^[a-zA-Z0-9:_-]+$/),
   paymentProvider: z.literal("test"),
+  shippingMethod: z.literal("home_delivery").default("home_delivery"),
   consentVersion: z.string().min(1).max(40).default("terms-v1"),
   couponCode: z.string().trim().max(40).optional(),
   customer: z.object({

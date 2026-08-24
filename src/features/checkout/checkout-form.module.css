@@ -1,3 +1,5 @@
 .prefillNote { margin: -8px 0 16px; color: var(--color-text-secondary); font-size: .78rem; }
+.row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.fieldHint { color: var(--color-text-secondary); font-size: .78rem; }
 @media (min-width: 900px) { .form { grid-template-columns: minmax(0,1fr) 390px; gap: 60px; }.summary { position: sticky; top: 108px; } }
 @media (max-width: 559px) { .row { grid-template-columns: 1fr; }.sections section { padding: 20px; }.form { gap: 28px; } }

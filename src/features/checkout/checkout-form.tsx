@@ -3,14 +3,10 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/features/cart/cart-provider";
+import { TaiwanAddressFields } from "@/components/taiwan-address-fields";
 import { formatTwd } from "@/lib/money";
 import type { StoreSettings } from "@/lib/store-settings";
 import styles from "./checkout-form.module.css";
-
-const taiwanCities = [
-  "基隆市", "台北市", "新北市", "桃園市", "新竹市", "新竹縣", "苗栗縣", "台中市", "彰化縣", "南投縣", "雲林縣",
-  "嘉義市", "嘉義縣", "台南市", "高雄市", "屏東縣", "宜蘭縣", "花蓮縣", "台東縣", "澎湖縣", "金門縣", "連江縣",
-] as const;
 
 type CheckoutPrefill = {
   displayName: string;
@@ -98,6 +94,7 @@ export function CheckoutForm({ settings, prefill }: { settings: Pick<StoreSettin
         body: JSON.stringify({
           idempotencyKey: idempotencyKey.current,
           paymentProvider: formData.get("payment") ?? "test",
+          shippingMethod: formData.get("shippingMethod") ?? "home_delivery",
           consentVersion: "terms-v1",
           couponCode: couponCode.trim() || undefined,
           customer: {
@@ -132,7 +129,8 @@ export function CheckoutForm({ settings, prefill }: { settings: Pick<StoreSettin
     {errorMessage && <div className={styles.error} role="alert">{errorMessage}</div>}
     <div className={styles.sections}>
       <section><h2 className="serif">聯絡資料</h2>{prefill && <p className={styles.prefillNote}>已帶入會員資料，可在送出前修改。</p>}<div className={styles.fields}><div className="field"><label htmlFor="name">姓名</label><input className="input" id="name" name="name" autoComplete="name" required maxLength={80} defaultValue={prefill?.displayName} /></div><div className="field"><label htmlFor="email">Email</label><input className="input" id="email" name="email" type="email" autoComplete="email" required maxLength={254} defaultValue={prefill?.email} /></div><div className="field"><label htmlFor="phone">手機</label><input className="input" id="phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" required pattern="09[0-9]{8}" placeholder="0912345678" defaultValue={prefill?.phone} /></div></div></section>
-      <section><h2 className="serif">宅配地址</h2>{prefill?.address && <p className={styles.prefillNote}>已帶入你的預設地址，可在送出前修改。</p>}<div className={styles.fields}><div className="field"><label htmlFor="recipient">收件人</label><input className="input" id="recipient" name="recipient" required maxLength={80} defaultValue={prefill?.address?.recipientName || prefill?.displayName} /></div><div className={styles.row}><div className="field"><label htmlFor="city">縣市</label><select className="input" id="city" name="city" required defaultValue={prefill?.address?.city ?? ""}><option value="" disabled>請選擇</option>{taiwanCities.map((city) => <option key={city}>{city}</option>)}</select></div><div className="field"><label htmlFor="district">區域</label><input className="input" id="district" name="district" required maxLength={30} defaultValue={prefill?.address?.district} /></div></div><div className={styles.row}><div className="field"><label htmlFor="postalCode">郵遞區號</label><input className="input" id="postalCode" name="postalCode" inputMode="numeric" required minLength={3} maxLength={6} defaultValue={prefill?.address?.postalCode} /></div><div /></div><div className="field"><label htmlFor="address">地址</label><input className="input" id="address" name="address" autoComplete="street-address" required maxLength={160} defaultValue={prefill?.address?.addressLine} /></div></div></section>
+      <section><h2 className="serif">宅配地址</h2>{prefill?.address && <p className={styles.prefillNote}>已帶入你的預設地址，可在送出前修改。</p>}<div className={styles.fields}><div className="field"><label htmlFor="recipient">收件人</label><input className="input" id="recipient" name="recipient" required maxLength={80} defaultValue={prefill?.address?.recipientName || prefill?.displayName} /></div><TaiwanAddressFields className={styles.row} idPrefix="checkout" defaultCity={prefill?.address?.city} defaultDistrict={prefill?.address?.district} /><div className={styles.row}><div className="field"><label htmlFor="postalCode">郵遞區號</label><input className="input" id="postalCode" name="postalCode" inputMode="numeric" required minLength={3} maxLength={6} defaultValue={prefill?.address?.postalCode} /></div><div /></div><div className="field"><label htmlFor="address">地址</label><input className="input" id="address" name="address" autoComplete="street-address" required maxLength={160} defaultValue={prefill?.address?.addressLine} /></div></div></section>
+      <section><h2 className="serif">配送方式</h2><div className="field"><label htmlFor="shippingMethod">選擇配送方式</label><select className="input" id="shippingMethod" name="shippingMethod" defaultValue="home_delivery" required><option value="home_delivery">宅配（台灣）</option></select><small className={styles.fieldHint}>V1 目前提供宅配；後續版本可擴充超商取貨等配送方式。</small></div></section>
       <section><h2 className="serif">付款方式</h2><label className={styles.payment}><input type="radio" name="payment" value="test" defaultChecked /><span><strong>測試付款</strong><small>Preview 專用，不會產生真實扣款</small></span></label></section>
       <section><h2 className="serif">優惠碼</h2><div className="field"><label htmlFor="couponCode">優惠碼（選填）</label><div className={styles.couponRow}><input className="input" id="couponCode" name="couponCode" value={couponCode} onChange={(event) => { setCouponCode(event.target.value.toUpperCase()); setCouponPreview(null); setCouponStatus("idle"); setCouponMessage(null); }} maxLength={40} autoCapitalize="characters" placeholder="輸入優惠碼" /><button className="button button-secondary button-small" type="button" onClick={applyCoupon} disabled={couponStatus === "loading" || !items.length}>{couponStatus === "loading" ? "檢查中…" : couponPreview ? "重新套用" : "套用"}</button></div><small className={`${styles.couponMessage} ${couponStatus === "error" ? styles.couponError : couponStatus === "success" ? styles.couponSuccess : ""}`} role={couponStatus === "error" ? "alert" : undefined}>{couponMessage ?? "套用後會在摘要顯示折扣，正式建單時仍由伺服器再次驗證。"}</small></div></section>
       <label className={styles.consent}><input type="checkbox" required />我已閱讀並同意服務條款與退換貨政策</label>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { TaiwanAddressFields } from "@/components/taiwan-address-fields";
 import { createAddressAction, deleteAddressAction, setDefaultAddressAction, signOutMember, updateAddressAction, updateProfileAction } from "./actions";
 import styles from "./account.module.css";
 
@@ -10,11 +11,6 @@ export const dynamic = "force-dynamic";
 
 const paymentLabels: Record<string, string> = { pending: "待付款", paid: "已付款", failed: "付款失敗", refunded: "已退款", partially_refunded: "部分退款" };
 const fulfillmentLabels: Record<string, string> = { unfulfilled: "待處理", awaiting_stock: "等待到貨", processing: "處理中", shipped: "已出貨", delivered: "已送達", cancelled: "已取消" };
-const taiwanCities = [
-  "基隆市", "台北市", "新北市", "桃園市", "新竹市", "新竹縣", "苗栗縣", "台中市", "彰化縣", "南投縣", "雲林縣",
-  "嘉義市", "嘉義縣", "台南市", "高雄市", "屏東縣", "宜蘭縣", "花蓮縣", "台東縣", "澎湖縣", "金門縣", "連江縣",
-] as const;
-
 function formatTwd(value: number) {
   return new Intl.NumberFormat("zh-TW", { style: "currency", currency: "TWD", maximumFractionDigits: 0 }).format(value);
 }
@@ -85,7 +81,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           <details className={styles.editAddress}><summary>編輯地址</summary><form className={styles.form} action={updateAddressAction}>
             <input type="hidden" name="addressId" value={address.id} />
             <div className={styles.formGrid}><div className="field"><label htmlFor={`edit-recipient-${address.id}`}>收件人</label><input className="input" id={`edit-recipient-${address.id}`} name="recipientName" required maxLength={80} defaultValue={address.recipient_name} /></div><div className="field"><label htmlFor={`edit-phone-${address.id}`}>手機</label><input className="input" id={`edit-phone-${address.id}`} name="phone" type="tel" inputMode="tel" required pattern="09[0-9]{8}" defaultValue={address.phone} /></div></div>
-            <div className={styles.formGrid}><div className="field"><label htmlFor={`edit-city-${address.id}`}>縣市</label><select className="input" id={`edit-city-${address.id}`} name="city" required defaultValue={address.city}><option value="" disabled>請選擇</option>{taiwanCities.map((city) => <option key={city}>{city}</option>)}</select></div><div className="field"><label htmlFor={`edit-district-${address.id}`}>區域</label><input className="input" id={`edit-district-${address.id}`} name="district" required maxLength={30} defaultValue={address.district} /></div></div>
+            <TaiwanAddressFields className={styles.formGrid} idPrefix={`edit-${address.id}`} defaultCity={address.city} defaultDistrict={address.district} />
             <div className={styles.formGrid}><div className="field"><label htmlFor={`edit-postal-${address.id}`}>郵遞區號</label><input className="input" id={`edit-postal-${address.id}`} name="postalCode" inputMode="numeric" required minLength={3} maxLength={6} defaultValue={address.postal_code} /></div><div className="field"><label htmlFor={`edit-address-${address.id}`}>地址</label><input className="input" id={`edit-address-${address.id}`} name="addressLine" autoComplete="street-address" required maxLength={160} defaultValue={address.address_line} /></div></div>
             <label className={styles.checkbox}><input type="checkbox" name="isDefault" defaultChecked={address.is_default} />設為預設地址</label>
             <button className="button button-secondary button-small" type="submit">儲存修改</button>
@@ -93,7 +89,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </div>)}</div> : <p className={styles.empty}>尚未儲存地址。結帳時可直接填寫宅配資訊。</p>}
         <details className={styles.addAddress}><summary>新增宅配地址</summary><form className={styles.form} action={createAddressAction}>
           <div className={styles.formGrid}><div className="field"><label htmlFor="member-recipient">收件人</label><input className="input" id="member-recipient" name="recipientName" required maxLength={80} /></div><div className="field"><label htmlFor="member-address-phone">手機</label><input className="input" id="member-address-phone" name="phone" type="tel" inputMode="tel" required pattern="09[0-9]{8}" placeholder="0912345678" /></div></div>
-          <div className={styles.formGrid}><div className="field"><label htmlFor="member-city">縣市</label><select className="input" id="member-city" name="city" required defaultValue=""><option value="" disabled>請選擇</option>{taiwanCities.map((city) => <option key={city}>{city}</option>)}</select></div><div className="field"><label htmlFor="member-district">區域</label><input className="input" id="member-district" name="district" required maxLength={30} /></div></div>
+          <TaiwanAddressFields className={styles.formGrid} idPrefix="member" />
           <div className={styles.formGrid}><div className="field"><label htmlFor="member-postal">郵遞區號</label><input className="input" id="member-postal" name="postalCode" inputMode="numeric" required minLength={3} maxLength={6} /></div><div className="field"><label htmlFor="member-address-line">地址</label><input className="input" id="member-address-line" name="addressLine" autoComplete="street-address" required maxLength={160} /></div></div>
           <label className={styles.checkbox}><input type="checkbox" name="isDefault" />設為預設地址</label>
           <button className="button button-secondary button-small" type="submit">儲存地址</button>

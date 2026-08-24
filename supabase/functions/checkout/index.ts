@@ -11,6 +11,7 @@ const PHONE = /^09[0-9]{8}$/;
 type CheckoutPayload = {
   idempotencyKey: string;
   paymentProvider: "test";
+  shippingMethod?: "home_delivery";
   consentVersion?: string;
   couponCode?: string;
   customer: {
@@ -76,6 +77,7 @@ function validatePayload(value: unknown): value is CheckoutPayload {
   if (typeof value.idempotencyKey !== "string" || !IDEMPOTENCY_KEY.test(value.idempotencyKey)) return false;
   if (value.paymentProvider !== "test") return false;
   if (typeof value.consentVersion !== "undefined" && (typeof value.consentVersion !== "string" || value.consentVersion.length > 40)) return false;
+  if (typeof value.shippingMethod !== "undefined" && value.shippingMethod !== "home_delivery") return false;
   if (typeof value.couponCode !== "undefined" && (typeof value.couponCode !== "string" || value.couponCode.trim().length > 40)) return false;
 
   const customer = value.customer;
