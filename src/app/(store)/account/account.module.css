@@ -6,6 +6,9 @@
 .panel { padding: 26px; border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-surface); box-shadow: var(--shadow-sm); }
 .panel h2 { margin: 0 0 18px; font-size: 1.05rem; }
 .profile { display: grid; gap: 12px; }
+.form { display: grid; gap: 14px; }
+.form :global(.button) { justify-self: start; }
+.formGrid { display: grid; gap: 14px; }
 .profileRow { display: flex; justify-content: space-between; gap: 16px; padding-block: 10px; border-bottom: 1px solid var(--color-border); }
 .profileRow:last-child { border-bottom: 0; }
 .profileRow span { color: var(--color-text-secondary); font-size: .82rem; }
@@ -14,7 +17,15 @@
 .address { padding: 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: #fffdfa; }
 .addressHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
 .addressHeader strong { font-size: .9rem; }
+.addressActions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.textButton { padding: 0; border: 0; color: var(--color-primary); background: transparent; font: inherit; font-size: .76rem; cursor: pointer; text-decoration: underline; }
+.dangerButton { color: #8a564c; }
 .address p { margin: 0; color: var(--color-text-secondary); font-size: .82rem; line-height: 1.6; }
+.addAddress { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+.addAddress summary { cursor: pointer; font-size: .85rem; font-weight: 700; }
+.addAddress[open] summary { margin-bottom: 16px; }
+.checkbox { display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); font-size: .8rem; }
+.checkbox input { accent-color: var(--color-primary); }
 .empty { margin: 0; color: var(--color-text-secondary); font-size: .88rem; }
 .hint { margin: 14px 0 0; color: var(--color-text-secondary); font-size: .78rem; }
 .orders { margin-top: 18px; }
@@ -34,17 +45,21 @@
 .orderAside strong { font-size: .95rem; }
 .orderAside span { color: var(--color-text-secondary); font-size: .74rem; }
 .notice { margin-bottom: 18px; padding: 14px 16px; border: 1px solid #d7c3bb; border-radius: var(--radius-md); color: #79564c; background: #fbf2ee; font-size: .86rem; }
+.status { margin-bottom: 18px; padding: 14px 16px; border: 1px solid #c7d8c8; border-radius: var(--radius-md); color: #4d6b52; background: #eff7ef; font-size: .86rem; }
 @media (min-width: 760px) {
   .page { padding-block: 72px 120px; }
   .layout { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
   .orders { grid-column: 1 / -1; }
   .favorites { grid-column: 1 / -1; }
+  .formGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 520px) {
   .page { width: min(calc(100% - 32px), var(--max-width)); }
   .titleRow { align-items: start; flex-direction: column; }
   .titleRow .button { width: 100%; }
   .panel { padding: 20px; }
+  .addressHeader { align-items: flex-start; flex-direction: column; }
+  .addressActions { justify-content: flex-start; }
   .order { grid-template-columns: 1fr; }
   .orderAside { justify-items: start; }
 }
