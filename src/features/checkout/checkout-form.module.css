@@ -34,7 +34,7 @@
 
 @media (min-width: 900px) {
   .form { grid-template-columns: minmax(0, 1fr) 390px; gap: 40px; align-items: start; }
-  .summary { position: sticky; top: 108px; }
+  .summary { position: sticky; top: 104px; z-index: 2; max-height: calc(100vh - 128px); overflow-y: auto; }
 }
 
 @media (max-width: 559px) {
