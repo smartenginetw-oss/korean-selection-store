@@ -29,7 +29,7 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
 
   function addToCart() {
     if (unavailable) return;
-    addItem({ variantKey: selectedVariant?.id ?? `${product.id}:${JSON.stringify(selections)}`, variantId: selectedVariant?.id, productId: product.id, slug: product.slug, name: product.name, color, size, quantity: 1, price, availability: availability === "preorder" ? "preorder" : "in_stock", arrival: selectedVariant?.arrival ?? product.arrival, palette: product.palette, selectedOptions: selections });
+    addItem({ variantKey: selectedVariant?.id ?? `${product.id}:${JSON.stringify(selections)}`, variantId: selectedVariant?.id, productId: product.id, slug: product.slug, name: product.name, color, size, quantity: 1, price, availability: availability === "preorder" ? "preorder" : "in_stock", arrival: selectedVariant?.arrival ?? product.arrival, palette: product.palette, image: product.images?.[0], selectedOptions: selections });
     setAdded(true);
   }
 

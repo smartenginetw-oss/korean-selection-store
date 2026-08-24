@@ -65,6 +65,7 @@ export default async function MemberOrderPage({ params }: { params: Promise<{ id
       availability: variant.availability,
       arrival: variant.arrival,
       palette: product.palette,
+      image: product.images?.[0],
       selectedOptions,
     };
   });

@@ -15,6 +15,7 @@ export type CartItem = {
   availability: "in_stock" | "preorder";
   arrival?: string;
   palette: [string, string];
+  image?: string;
   selectedOptions?: Record<string, string>;
 };
 

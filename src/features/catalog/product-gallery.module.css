@@ -1,0 +1,7 @@
+.gallery { min-width: 0; }
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; margin-top: 12px; }
+.thumb { position: relative; aspect-ratio: 4 / 5; overflow: hidden; padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); cursor: pointer; opacity: .72; transition: border-color .2s ease, opacity .2s ease, transform .2s ease; }
+.thumb:hover { opacity: 1; transform: translateY(-1px); }
+.thumb.active { border-color: var(--color-primary); box-shadow: inset 0 0 0 1px var(--color-primary); opacity: 1; }
+.thumb img { object-fit: cover; }
+@media (max-width: 520px) { .thumbs { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
