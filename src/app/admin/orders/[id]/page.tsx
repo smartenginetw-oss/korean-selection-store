@@ -24,10 +24,24 @@ const paymentLabels: Record<string, string> = {
 };
 
 const eventLabels: Record<string, string> = {
+  order_created: "訂單已建立",
+  checkout_created: "訂單已建立",
+  inventory_reserved: "庫存已保留",
+  payment_succeeded: "付款已完成",
   fulfillment_status_changed: "履約狀態更新",
-  order_created: "建立訂單",
   payment_status_changed: "付款狀態更新",
+  shipment_created: "出貨資訊已建立",
+  order_cancelled: "訂單已取消",
+  order_completed: "訂單已完成",
 };
+
+function formatTimelineNote(note: string | null) {
+  if (!note) return "";
+  if (note === "Test payment adapter confirmed the order.") return "測試付款已確認訂單。";
+  const inventoryMatch = note.match(/^Inventory held for (\d+) minutes\.$/);
+  if (inventoryMatch) return `庫存已保留 ${inventoryMatch[1]} 分鐘。`;
+  return note;
+}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("zh-TW", {
@@ -112,7 +126,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
             <div className={styles.timelineDot} aria-hidden="true" />
             <div><strong>{eventLabels[event.eventType] ?? event.eventType}</strong><small>{formatDate(event.createdAt)} · {actorLabel(event.actorType)}</small>
               {(event.fromStatus || event.toStatus) && <p>{event.fromStatus ? (fulfillmentLabels[event.fromStatus] ?? event.fromStatus) : "開始"} → {event.toStatus ? (fulfillmentLabels[event.toStatus] ?? event.toStatus) : "—"}</p>}
-              {event.note && <p>{event.note}</p>}
+              {formatTimelineNote(event.note) && <p>{formatTimelineNote(event.note)}</p>}
             </div>
           </li>)}</ol> : <p className={styles.empty}>目前尚無 Timeline 紀錄。</p>}
         </section>
