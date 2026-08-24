@@ -93,6 +93,41 @@ export async function setDefaultAddressAction(formData: FormData) {
   redirect("/account?status=address_saved");
 }
 
+export async function updateAddressAction(formData: FormData) {
+  const addressId = z.string().uuid().safeParse(formData.get("addressId"));
+  if (!addressId.success) accountError("address");
+  const parsed = addressSchema.safeParse({
+    recipientName: formData.get("recipientName"),
+    phone: formData.get("phone"),
+    postalCode: formData.get("postalCode"),
+    city: formData.get("city"),
+    district: formData.get("district"),
+    addressLine: formData.get("addressLine"),
+  });
+  if (!parsed.success) accountError("address");
+
+  const { supabase, user } = await getMember();
+  const { data: current } = await supabase.from("addresses").select("is_default").eq("id", addressId.data).eq("profile_id", user.id).maybeSingle();
+  if (!current) accountError("address");
+  const shouldBeDefault = current.is_default || formData.get("isDefault") === "on";
+  if (shouldBeDefault) {
+    const { error: clearError } = await supabase.from("addresses").update({ is_default: false }).eq("profile_id", user.id);
+    if (clearError) accountError("address");
+  }
+  const { error } = await supabase.from("addresses").update({
+    recipient_name: parsed.data.recipientName,
+    phone: parsed.data.phone,
+    postal_code: parsed.data.postalCode,
+    city: parsed.data.city,
+    district: parsed.data.district,
+    address_line: parsed.data.addressLine,
+    is_default: shouldBeDefault,
+  }).eq("id", addressId.data).eq("profile_id", user.id);
+  if (error) accountError("address");
+  revalidatePath("/account");
+  redirect("/account?status=address_saved");
+}
+
 export async function deleteAddressAction(formData: FormData) {
   const addressId = z.string().uuid().safeParse(formData.get("addressId"));
   if (!addressId.success) accountError("address");

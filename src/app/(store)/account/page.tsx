@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAddressAction, deleteAddressAction, setDefaultAddressAction, signOutMember, updateProfileAction } from "./actions";
+import { createAddressAction, deleteAddressAction, setDefaultAddressAction, signOutMember, updateAddressAction, updateProfileAction } from "./actions";
 import styles from "./account.module.css";
 
 export const metadata = { title: "會員中心" };
@@ -82,6 +82,14 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         {addresses.length ? <div className={styles.addressList}>{addresses.map((address) => <div className={styles.address} key={address.id}>
           <div className={styles.addressHeader}><strong>{address.recipient_name} · {address.phone}</strong><div className={styles.addressActions}>{address.is_default && <span className="badge badge-stock">預設</span>}{!address.is_default && <form action={setDefaultAddressAction}><input type="hidden" name="addressId" value={address.id} /><button className={styles.textButton} type="submit">設為預設</button></form>}<form action={deleteAddressAction}><input type="hidden" name="addressId" value={address.id} /><button className={`${styles.textButton} ${styles.dangerButton}`} type="submit">刪除</button></form></div></div>
           <p>{address.postal_code} {address.city}{address.district}{address.address_line}</p>
+          <details className={styles.editAddress}><summary>編輯地址</summary><form className={styles.form} action={updateAddressAction}>
+            <input type="hidden" name="addressId" value={address.id} />
+            <div className={styles.formGrid}><div className="field"><label htmlFor={`edit-recipient-${address.id}`}>收件人</label><input className="input" id={`edit-recipient-${address.id}`} name="recipientName" required maxLength={80} defaultValue={address.recipient_name} /></div><div className="field"><label htmlFor={`edit-phone-${address.id}`}>手機</label><input className="input" id={`edit-phone-${address.id}`} name="phone" type="tel" inputMode="tel" required pattern="09[0-9]{8}" defaultValue={address.phone} /></div></div>
+            <div className={styles.formGrid}><div className="field"><label htmlFor={`edit-city-${address.id}`}>縣市</label><select className="input" id={`edit-city-${address.id}`} name="city" required defaultValue={address.city}><option value="" disabled>請選擇</option>{taiwanCities.map((city) => <option key={city}>{city}</option>)}</select></div><div className="field"><label htmlFor={`edit-district-${address.id}`}>區域</label><input className="input" id={`edit-district-${address.id}`} name="district" required maxLength={30} defaultValue={address.district} /></div></div>
+            <div className={styles.formGrid}><div className="field"><label htmlFor={`edit-postal-${address.id}`}>郵遞區號</label><input className="input" id={`edit-postal-${address.id}`} name="postalCode" inputMode="numeric" required minLength={3} maxLength={6} defaultValue={address.postal_code} /></div><div className="field"><label htmlFor={`edit-address-${address.id}`}>地址</label><input className="input" id={`edit-address-${address.id}`} name="addressLine" autoComplete="street-address" required maxLength={160} defaultValue={address.address_line} /></div></div>
+            <label className={styles.checkbox}><input type="checkbox" name="isDefault" defaultChecked={address.is_default} />設為預設地址</label>
+            <button className="button button-secondary button-small" type="submit">儲存修改</button>
+          </form></details>
         </div>)}</div> : <p className={styles.empty}>尚未儲存地址。結帳時可直接填寫宅配資訊。</p>}
         <details className={styles.addAddress}><summary>新增宅配地址</summary><form className={styles.form} action={createAddressAction}>
           <div className={styles.formGrid}><div className="field"><label htmlFor="member-recipient">收件人</label><input className="input" id="member-recipient" name="recipientName" required maxLength={80} /></div><div className="field"><label htmlFor="member-address-phone">手機</label><input className="input" id="member-address-phone" name="phone" type="tel" inputMode="tel" required pattern="09[0-9]{8}" placeholder="0912345678" /></div></div>
