@@ -136,6 +136,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
             <div><dt>收件人</dt><dd>{order.recipientName}</dd></div>
             <div><dt>Email</dt><dd><a href={`mailto:${order.email}`}>{order.email}</a></dd></div>
             <div><dt>手機</dt><dd><a href={`tel:${order.phone}`}>{order.phone}</a></dd></div>
+            <div><dt>配送方式</dt><dd>{order.shippingMethod === "home_delivery" ? "宅配（台灣）" : order.shippingMethod}</dd></div>
             <div><dt>地址</dt><dd>{order.postalCode} {order.city}{order.district}<br />{order.addressLine}</dd></div>
             {order.customerNote && <div><dt>顧客備註</dt><dd>{order.customerNote}</dd></div>}
           </dl>

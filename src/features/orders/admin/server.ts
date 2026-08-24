@@ -59,6 +59,7 @@ export type AdminOrderDetail = {
   email: string;
   phone: string;
   recipientName: string;
+  shippingMethod: string;
   postalCode: string;
   city: string;
   district: string;
@@ -191,7 +192,7 @@ export async function getAdminOrderDetail(orderId: string) {
   const supabase = await createClient();
   const orderResult = await supabase
     .from("orders")
-    .select("id,order_number,profile_id,email,phone,recipient_name,postal_code,city,district,address_line,currency,subtotal,discount_total,coupon_code,shipping_total,grand_total,payment_status,fulfillment_status,order_status,stock_mode,customer_note,placed_at,created_at,updated_at")
+    .select("id,order_number,profile_id,email,phone,recipient_name,postal_code,city,district,address_line,currency,subtotal,discount_total,coupon_code,shipping_method,shipping_total,grand_total,payment_status,fulfillment_status,order_status,stock_mode,customer_note,placed_at,created_at,updated_at")
     .eq("id", orderId)
     .maybeSingle();
 
@@ -238,6 +239,7 @@ export async function getAdminOrderDetail(orderId: string) {
     email: row.email,
     phone: row.phone,
     recipientName: row.recipient_name,
+    shippingMethod: row.shipping_method,
     postalCode: row.postal_code,
     city: row.city,
     district: row.district,

@@ -555,6 +555,7 @@ export type Database = {
           postal_code: string
           profile_id: string | null
           recipient_name: string
+          shipping_method: string
           shipping_total: number
           stock_mode: string
           subtotal: number
@@ -585,6 +586,7 @@ export type Database = {
           postal_code: string
           profile_id?: string | null
           recipient_name: string
+          shipping_method?: string
           shipping_total?: number
           stock_mode: string
           subtotal: number
@@ -615,6 +617,7 @@ export type Database = {
           postal_code?: string
           profile_id?: string | null
           recipient_name?: string
+          shipping_method?: string
           shipping_total?: number
           stock_mode?: string
           subtotal?: number
