@@ -1,5 +1,46 @@
+.form { display: grid; gap: 24px; }
+.sections { display: grid; gap: 16px; min-width: 0; }
+.sections section { padding: 24px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.sections h2 { margin: 0 0 20px; font-size: 1.25rem; font-weight: 500; line-height: 1.3; }
 .prefillNote { margin: -8px 0 16px; color: var(--color-text-secondary); font-size: .78rem; }
+.fields { display: grid; gap: 16px; }
 .row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.fieldHint { color: var(--color-text-secondary); font-size: .78rem; }
-@media (min-width: 900px) { .form { grid-template-columns: minmax(0,1fr) 390px; gap: 60px; }.summary { position: sticky; top: 108px; } }
-@media (max-width: 559px) { .row { grid-template-columns: 1fr; }.sections section { padding: 20px; }.form { gap: 28px; } }
+.fieldHint { color: var(--color-text-secondary); font-size: .78rem; line-height: 1.5; }
+.payment { padding: 16px; display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--color-primary); border-radius: var(--radius-md); background: var(--color-surface-muted); cursor: pointer; }
+.payment input { flex: 0 0 auto; margin-top: 4px; accent-color: var(--color-primary); }
+.payment span { display: grid; gap: 3px; }
+.payment small { color: var(--color-text-secondary); font-size: .78rem; }
+.consent { display: flex; gap: 10px; align-items: flex-start; padding: 2px 4px; color: var(--color-text-secondary); font-size: .88rem; line-height: 1.5; }
+.consent input { flex: 0 0 auto; margin-top: 4px; accent-color: var(--color-primary); }
+.error { padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--color-error) 35%, var(--color-border)); border-radius: var(--radius-md); color: var(--color-error); background: color-mix(in srgb, var(--color-error) 8%, var(--color-surface)); }
+.couponRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.couponRow .button { margin-top: 0; white-space: nowrap; }
+.couponMessage { display: block; min-height: 1.2em; margin-top: 7px; color: var(--color-text-muted); font-size: .72rem; line-height: 1.5; }
+.couponError { color: var(--color-error); }
+.couponSuccess { color: var(--color-success); }
+.summary { min-width: 0; padding: 24px; align-self: start; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-md); }
+.summary h2 { margin: 0 0 18px; font-size: 1.25rem; font-weight: 500; }
+.line, .amount { display: flex; justify-content: space-between; gap: 20px; padding: 10px 0; }
+.line { border-bottom: 1px solid var(--color-border); font-size: .85rem; }
+.line > span { min-width: 0; }
+.line small { display: block; margin-top: 3px; color: var(--color-text-secondary); font-size: .75rem; }
+.line strong, .amount strong { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+.discount { color: var(--color-success); }
+.discount small { display: block; color: inherit; font-size: .7rem; }
+.total { margin-top: 10px; padding-top: 18px; border-top: 1px solid var(--color-border); font-size: 1.1rem; }
+.summary .button { width: 100%; margin-top: 18px; }
+.summary p { margin: 14px 0 0; color: var(--color-text-muted); font-size: .72rem; line-height: 1.5; }
+.summary button:disabled { opacity: .6; cursor: not-allowed; }
+
+@media (min-width: 900px) {
+  .form { grid-template-columns: minmax(0, 1fr) 390px; gap: 40px; align-items: start; }
+  .summary { position: sticky; top: 108px; }
+}
+
+@media (max-width: 559px) {
+  .row { grid-template-columns: 1fr; }
+  .sections section, .summary { padding: 20px; }
+  .form { gap: 20px; }
+  .couponRow { grid-template-columns: 1fr; }
+  .couponRow .button { width: 100%; }
+}
