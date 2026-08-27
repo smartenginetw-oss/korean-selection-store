@@ -1,0 +1,15 @@
+.layout { display: grid; gap: 16px; margin-bottom: 18px; }
+.form, .editForm { display: grid; gap: 14px; }
+.form label, .editForm label { display: grid; gap: 6px; color: var(--color-text-secondary); font-size: .78rem; }
+.form .button { width: 100%; margin-top: 2px; }
+.twoColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.rules { display: grid; gap: 10px; margin: 0; padding-left: 18px; color: var(--color-text-secondary); font-size: .8rem; line-height: 1.6; }
+.list { display: grid; gap: 14px; }
+.item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; padding: 18px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-muted); }
+.itemHeading { grid-column: 1 / -1; display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.itemHeading div { display: grid; gap: 5px; }
+.itemHeading small { color: var(--color-text-muted); font-size: .72rem; }
+.toggleForm { align-self: end; }
+.error { margin-bottom: 18px; padding: 12px 14px; border-radius: var(--radius-md); background: #f5e5e0; color: #8b4136; font-size: .82rem; }
+@media (min-width: 900px) { .layout { grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); } }
+@media (max-width: 640px) { .twoColumns { grid-template-columns: 1fr; }.item { grid-template-columns: 1fr; }.toggleForm { justify-self: start; } }

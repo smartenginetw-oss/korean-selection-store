@@ -55,3 +55,4 @@ export async function requireContentManager() {
   return result;
 }
 export const requireReports = () => requireCapability("reports");
+export const requireProcurement = () => requireCapability("procurement");

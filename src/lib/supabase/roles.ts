@@ -4,7 +4,7 @@ export type BackofficeRole = (typeof BACKOFFICE_ROLES)[number];
 export const EMPLOYEE_ROLES = ["staff", "catalog_staff", "order_staff"] as const;
 export type EmployeeRole = (typeof EMPLOYEE_ROLES)[number];
 
-export type BackofficeCapability = "catalog" | "inventory" | "orders" | "customers" | "coupons" | "content" | "reports" | "settings" | "staff";
+export type BackofficeCapability = "catalog" | "inventory" | "orders" | "customers" | "coupons" | "content" | "reports" | "procurement" | "settings" | "staff";
 
 export function isBackofficeRole(value: unknown): value is BackofficeRole {
   return typeof value === "string" && (BACKOFFICE_ROLES as readonly string[]).includes(value);
@@ -24,8 +24,8 @@ export function roleLabel(role: BackofficeRole) {
 
 export function roleDescription(role: BackofficeRole) {
   if (role === "admin") return "全部後台與團隊管理";
-  if (role === "partner") return "商品、訂單、顧客、優惠碼、內容與報表";
-  if (role === "staff") return "商品、訂單、顧客、優惠碼、內容與報表";
+  if (role === "partner") return "商品、訂單、顧客、優惠碼、內容、採購與報表";
+  if (role === "staff") return "商品、訂單、顧客、優惠碼、內容、採購與報表";
   if (role === "catalog_staff") return "商品上架、商品圖片與庫存";
   return "訂單履約、顧客、優惠碼與報表";
 }

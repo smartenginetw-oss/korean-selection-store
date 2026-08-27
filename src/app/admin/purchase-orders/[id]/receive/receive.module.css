@@ -1,0 +1,23 @@
+.orderHeading { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.orderHeading h2 { margin: 0 0 6px; }
+.orderHeading p { margin: 0; color: var(--color-text-muted); font-size: .8rem; }
+.form { display: grid; gap: 18px; }
+.form label { display: grid; gap: 6px; color: var(--color-text-secondary); font-size: .78rem; }
+.form .button { width: 100%; }
+.twoColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.itemList { display: grid; gap: 10px; }
+.itemListHeading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.itemListHeading h3 { margin: 0; font-size: 1rem; }
+.itemListHeading span { color: var(--color-text-muted); font-size: .74rem; }
+.itemRow { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-muted); }
+.itemRow > div { display: grid; gap: 4px; min-width: 0; }
+.itemRow small, .receipt small { color: var(--color-text-muted); font-size: .72rem; }
+.itemRow label { width: 140px; flex: 0 0 140px; }
+.itemRow input:disabled { opacity: .55; }
+.warning { margin-bottom: 18px; padding: 12px 14px; border-radius: var(--radius-md); background: #f5e9d6; color: #8a5a25; font-size: .82rem; }
+.error { margin-bottom: 18px; padding: 12px 14px; border-radius: var(--radius-md); background: #f5e5e0; color: #8b4136; font-size: .82rem; }
+.receiptList { display: grid; gap: 10px; }
+.receipt { display: flex; justify-content: space-between; gap: 16px; padding: 14px; border-bottom: 1px solid var(--color-border); }
+.receipt > div { display: grid; gap: 4px; }
+.receipt p { margin: 0; color: var(--color-text-secondary); font-size: .8rem; text-align: right; }
+@media (max-width: 640px) { .twoColumns { grid-template-columns: 1fr; }.orderHeading { flex-direction: column; }.itemRow { align-items: stretch; flex-direction: column; }.itemRow label { width: 100%; flex: auto; }.receipt { align-items: start; flex-direction: column; }.receipt p { text-align: left; } }
