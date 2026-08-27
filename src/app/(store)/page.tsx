@@ -1,16 +1,20 @@
 import Link from "next/link";
 import { ProductCard } from "@/components/product-card";
 import { getCatalog } from "@/features/catalog/server";
+import { getHomeCollections } from "@/features/home/server";
+import { getPublicCategories } from "@/features/catalog/server";
 import styles from "./home.module.css";
 
-const categories = [
-  { name: "TOPS", zh: "上衣", tone: "#cbb8a3" },
-  { name: "BOTTOMS", zh: "下著", tone: "#aeb3a5" },
-  { name: "OUTERWEAR", zh: "外套與層次", tone: "#c5aaa5" },
-];
+const categoryTones = ["#cbb8a3", "#aeb3a5", "#c5aaa5", "#b9a9a0", "#b6a99a"] as const;
 
 export default async function HomePage() {
-  const products = (await getCatalog()).slice(0, 4);
+  const [catalog, collections, publicCategories] = await Promise.all([getCatalog(), getHomeCollections(), getPublicCategories()]);
+  const categories = publicCategories.map((category, index) => ({ ...category, tone: categoryTones[index % categoryTones.length] }));
+  const products = catalog.slice(0, 4);
+  const popularProducts = [...catalog]
+    .filter((product) => product.isAvailable && (product.soldQuantity ?? 0) > 0)
+    .sort((a, b) => (b.soldQuantity ?? 0) - (a.soldQuantity ?? 0))
+    .slice(0, 4);
   return <>
     <section className={styles.hero}>
       <div className={`container ${styles.heroInner}`}>
@@ -21,7 +25,11 @@ export default async function HomePage() {
 
     <section className="section"><div className="container"><div className="section-head"><div><div className="eyebrow">Just arrived</div><h2 className="section-title serif">本週新選</h2></div><Link href="/products">查看全部 →</Link></div><div className={styles.productGrid}>{products.map((product) => <ProductCard key={product.id} product={product} />)}</div></div></section>
 
-    <section className={styles.categorySection}><div className="container"><div className="eyebrow">Shop by category</div><h2 className="section-title serif">建立你的日常輪廓</h2><div className={styles.categoryGrid}>{categories.map((category) => <Link key={category.name} href={`/products?category=${category.name.toLowerCase()}`} className={styles.category} style={{ "--category-tone": category.tone } as React.CSSProperties}><span>{category.zh}</span><strong>{category.name}</strong></Link>)}</div></div></section>
+    {popularProducts.length > 0 && <section className={styles.hotSection}><div className="container"><div className="section-head"><div><div className="eyebrow">Most loved</div><h2 className="section-title serif">近期熱賣</h2></div><Link href="/products?sort=popular">查看熱賣 →</Link></div><div className={styles.productGrid}>{popularProducts.map((product) => <ProductCard key={product.id} product={product} />)}</div></div></section>}
+
+    {collections.length > 0 && <section className={styles.collectionSection}><div className="container"><div className="eyebrow">Find your pace</div><h2 className="section-title serif">依照你的購買節奏選品</h2><div className={styles.collectionGrid}>{collections.map((collection) => <Link key={collection.href} href={collection.href} className={styles.collection} style={{ "--collection-tone": collection.tone } as React.CSSProperties}><span className="eyebrow">{collection.eyebrow}</span><strong>{collection.title}</strong><small>{collection.description}</small><span className={styles.collectionArrow}>→</span></Link>)}</div></div></section>}
+
+    {categories.length > 0 && <section className={styles.categorySection}><div className="container"><div className="eyebrow">Shop by category</div><h2 className="section-title serif">建立你的日常輪廓</h2><div className={styles.categoryGrid}>{categories.map((category) => <Link key={category.slug} href={`/products?category=${encodeURIComponent(category.slug)}`} className={styles.category} style={{ "--category-tone": category.tone } as React.CSSProperties}><span>{category.name}</span><strong>{category.slug.toUpperCase()}</strong></Link>)}</div></div></section>}
 
     <section className="section"><div className={`container ${styles.story}`}><div className={styles.storyArt}><span>01</span><span>SELECTED<br />WITH CALM</span></div><div className={styles.storyCopy}><div className="eyebrow">Our selection</div><h2 className="section-title serif">我們相信質感<br />不需要大聲說話。</h2><p>從版型、面料到穿著情境，挑選能在工作、週末與旅途中反覆出場的男裝。</p><Link className="button button-secondary" href="/about">認識 GYEOT</Link></div></div></section>
 

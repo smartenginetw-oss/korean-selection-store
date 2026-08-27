@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getFixedPopoverPosition } from "@/components/fixed-popover-position";
 import calendarStyles from "../reports/reports.module.css";
 import styles from "./coupons.module.css";
 
@@ -57,18 +58,33 @@ export function CouponDatePicker({ name, label }: { name: "startsAt" | "endsAt";
   const [value, setValue] = useState("");
   const [active, setActive] = useState(false);
   const [viewMonth, setViewMonth] = useState(monthKey(todayInput()));
+  const [position, setPosition] = useState({ top: 0, left: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const cells = useMemo(() => daysForMonth(viewMonth), [viewMonth]);
   const selectedDate = datePart(value);
   const selectedTime = timePart(value);
 
   useEffect(() => {
+    if (!active) return;
+    function updatePosition() {
+      const button = buttonRef.current;
+      if (!button) return;
+      setPosition(getFixedPopoverPosition(button, { width: 286, height: 390 }));
+    }
     function closeOnOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) setActive(false);
     }
+    updatePosition();
     document.addEventListener("mousedown", closeOnOutside);
-    return () => document.removeEventListener("mousedown", closeOnOutside);
-  }, []);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutside);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [active]);
 
   function setDate(date: string) {
     setValue(`${date}T${selectedTime}`);
@@ -76,12 +92,12 @@ export function CouponDatePicker({ name, label }: { name: "startsAt" | "endsAt";
   }
 
   return <div className={calendarStyles.datePicker} ref={containerRef}>
-    <button className={calendarStyles.dateButton} id={`coupon-${name}`} type="button" aria-haspopup="dialog" aria-expanded={active} onClick={() => { if (!active) setViewMonth(monthKey(selectedDate || todayInput())); setActive(!active); }}>
+    <button ref={buttonRef} className={calendarStyles.dateButton} id={`coupon-${name}`} type="button" aria-haspopup="dialog" aria-expanded={active} onClick={() => { if (!active) setViewMonth(monthKey(selectedDate || todayInput())); setActive(!active); }}>
       <span>{formatValue(value)}</span>
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="5" width="16" height="15" rx="3" /><path d="M8 3v4M16 3v4M4 10h16" /></svg>
     </button>
     <input type="hidden" name={name} value={value} />
-    {active && <div className={calendarStyles.calendar} role="dialog" aria-label={`${label}日曆`}>
+    {active && <div className={calendarStyles.calendar} style={{ top: position.top, left: position.left }} role="dialog" aria-label={`${label}日曆`}>
       <div className={calendarStyles.calendarHeader}><button type="button" aria-label="上一個月" onClick={() => setViewMonth(shiftMonth(viewMonth, -1))}>←</button><strong>{monthTitle(viewMonth)}</strong><button type="button" aria-label="下一個月" onClick={() => setViewMonth(shiftMonth(viewMonth, 1))}>→</button></div>
       <div className={calendarStyles.weekdays}>{weekdayLabels.map((weekday) => <span key={weekday}>{weekday}</span>)}</div>
       <div className={calendarStyles.calendarGrid}>{cells.map((cell) => <button className={`${calendarStyles.day} ${cell.outside ? calendarStyles.dayOutside : ""} ${cell.date === selectedDate ? calendarStyles.daySelected : ""} ${cell.date === todayInput() ? calendarStyles.dayToday : ""}`} key={cell.date} type="button" aria-label={cell.date} aria-pressed={cell.date === selectedDate} onClick={() => setDate(cell.date)}>{cell.day}</button>)}</div>

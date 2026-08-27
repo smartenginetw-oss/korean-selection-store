@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireReports } from "@/lib/supabase/auth";
+import { fulfillmentStatusLabels } from "@/features/orders/order-status-labels";
 
 export type AdminReportData = {
   startDate: string;
@@ -12,13 +13,16 @@ export type AdminReportData = {
     paidOrderCount: number;
     revenue: number;
     expense: number;
+    operatingExpense: number;
     netCashflow: number;
     costCoverage: number;
     averageOrderValue: number;
   };
   stockModes: Array<{ label: string; count: number }>;
   fulfillment: Array<{ label: string; count: number }>;
-  trend: Array<{ label: string; date: string; orders: number; revenue: number; expense: number; netCashflow: number }>;
+  trend: Array<{ label: string; date: string; orders: number; revenue: number; expense: number; operatingExpense: number; netCashflow: number }>;
+  operatingExpenses: Array<{ month: string; rentCost: number; shippingCost: number; advertisingCost: number; packagingCost: number; otherCost: number; total: number; notes: string }>;
+  canEditOperatingExpenses: boolean;
   topProducts: Array<{ name: string; quantity: number; revenue: number }>;
 };
 
@@ -30,15 +34,6 @@ export type AdminReportFilters = {
   end?: string;
   granularity?: string;
   cashflow?: string;
-};
-
-const fulfillmentLabels: Record<string, string> = {
-  unfulfilled: "待處理",
-  awaiting_stock: "等待到貨",
-  processing: "處理中",
-  shipped: "已出貨",
-  delivered: "已送達",
-  cancelled: "已取消",
 };
 
 function dateKey(value: string | Date) {
@@ -77,13 +72,13 @@ function bucketLabel(value: string, granularity: ReportGranularity) {
 }
 
 function buildBuckets(startDate: string, endDate: string, granularity: ReportGranularity) {
-  const buckets: Array<{ date: string; label: string; orders: number; revenue: number; expense: number; netCashflow: number }> = [];
+  const buckets: Array<{ date: string; label: string; orders: number; revenue: number; expense: number; operatingExpense: number; netCashflow: number }> = [];
   if (granularity === "year") {
     const startYear = Number(startDate.slice(0, 4));
     const endYear = Number(endDate.slice(0, 4));
     for (let year = startYear; year <= endYear; year += 1) {
       const date = String(year);
-      buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0, expense: 0, netCashflow: 0 });
+      buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0, expense: 0, operatingExpense: 0, netCashflow: 0 });
     }
     return buckets;
   }
@@ -93,7 +88,7 @@ function buildBuckets(startDate: string, endDate: string, granularity: ReportGra
     const end = new Date(`${endDate.slice(0, 7)}-01T00:00:00Z`);
     while (start <= end) {
       const date = start.toISOString().slice(0, 7);
-      buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0, expense: 0, netCashflow: 0 });
+      buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0, expense: 0, operatingExpense: 0, netCashflow: 0 });
       start.setUTCMonth(start.getUTCMonth() + 1);
     }
     return buckets;
@@ -103,14 +98,14 @@ function buildBuckets(startDate: string, endDate: string, granularity: ReportGra
   const end = new Date(`${endDate}T00:00:00Z`);
   while (start <= end) {
     const date = inputDateKey(start);
-    buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0, expense: 0, netCashflow: 0 });
+    buckets.push({ date, label: bucketLabel(date, granularity), orders: 0, revenue: 0, expense: 0, operatingExpense: 0, netCashflow: 0 });
     start.setUTCDate(start.getUTCDate() + 1);
   }
   return buckets;
 }
 
 export async function getAdminReports(filters: AdminReportFilters = {}): Promise<{ report: AdminReportData | null; error: string | null }> {
-  await requireReports();
+  const access = await requireReports();
   const supabase = await createClient();
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const defaultStart = addDays(today, -29);
@@ -133,9 +128,21 @@ export async function getAdminReports(filters: AdminReportFilters = {}): Promise
     .order("created_at", { ascending: true })
     .limit(5000);
 
+  const expensesResult = await supabase
+    .from("operating_expenses")
+    .select("period_month,rent_cost,shipping_cost,advertising_cost,packaging_cost,other_cost,notes")
+    .gte("period_month", `${safeStartDate.slice(0, 7)}-01`)
+    .lte("period_month", `${safeEndDate.slice(0, 7)}-01`)
+    .order("period_month", { ascending: true });
+
   if (ordersResult.error) {
     console.error("[admin/reports] order read failed", ordersResult.error.message);
     return { report: null, error: "報表資料目前無法讀取。" };
+  }
+
+  if (expensesResult.error) {
+    console.error("[admin/reports] operating expense read failed", expensesResult.error.message);
+    return { report: null, error: "營業費用資料目前無法讀取。" };
   }
 
   const orders = ordersResult.data ?? [];
@@ -176,7 +183,43 @@ export async function getAdminReports(filters: AdminReportFilters = {}): Promise
     const day = orderDate ? trendByDate.get(bucketKey(orderDate, granularity)) : undefined;
     if (day && item.unit_cost !== null) day.expense += item.unit_cost * item.quantity;
   }
-  for (const day of trend) day.netCashflow = day.revenue - day.expense;
+
+  const operatingExpenses = (expensesResult.data ?? []).map((row) => ({
+    month: row.period_month.slice(0, 7),
+    rentCost: row.rent_cost,
+    shippingCost: row.shipping_cost,
+    advertisingCost: row.advertising_cost,
+    packagingCost: row.packaging_cost,
+    otherCost: row.other_cost,
+    total: row.rent_cost + row.shipping_cost + row.advertising_cost + row.packaging_cost + row.other_cost,
+    notes: row.notes,
+  }));
+  const operatingByMonth = new Map(operatingExpenses.map((row) => [row.month, row.total]));
+  const daysInMonth = (month: string) => new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).getUTCDate();
+  const overlapDays = (month: string) => {
+    const monthStart = `${month}-01`;
+    const monthEnd = `${month}-${String(daysInMonth(month)).padStart(2, "0")}`;
+    const start = safeStartDate > monthStart ? safeStartDate : monthStart;
+    const end = safeEndDate < monthEnd ? safeEndDate : monthEnd;
+    if (start > end) return 0;
+    return Math.floor((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86400000) + 1;
+  };
+  for (const bucket of trend) {
+    if (granularity === "day") {
+      const month = bucket.date.slice(0, 7);
+      bucket.operatingExpense = (operatingByMonth.get(month) ?? 0) / daysInMonth(month);
+    } else if (granularity === "month") {
+      bucket.operatingExpense = (operatingByMonth.get(bucket.date) ?? 0) * (overlapDays(bucket.date) / daysInMonth(bucket.date));
+    } else {
+      bucket.operatingExpense = Array.from(operatingByMonth.entries())
+        .filter(([month]) => month.startsWith(bucket.date))
+        .reduce((sum, [month, total]) => sum + total * (overlapDays(month) / daysInMonth(month)), 0);
+    }
+    bucket.expense += bucket.operatingExpense;
+    bucket.netCashflow = bucket.revenue - bucket.expense;
+  }
+  const operatingExpense = trend.reduce((sum, bucket) => sum + bucket.operatingExpense, 0);
+  expense += operatingExpense;
   const netCashflow = revenue - expense;
   const costCoverage = totalItemQuantity ? Math.round((totalCostedQuantity / totalItemQuantity) * 100) : 0;
 
@@ -192,7 +235,7 @@ export async function getAdminReports(filters: AdminReportFilters = {}): Promise
   for (const order of activeOrders) fulfillmentCounts.set(order.fulfillment_status, (fulfillmentCounts.get(order.fulfillment_status) ?? 0) + 1);
   const fulfillment = Array.from(fulfillmentCounts.entries())
     .sort(([, left], [, right]) => right - left)
-    .map(([status, count]) => ({ label: fulfillmentLabels[status] ?? status, count }));
+    .map(([status, count]) => ({ label: fulfillmentStatusLabels[status] ?? "狀態更新", count }));
 
   const productMap = new Map<string, { name: string; quantity: number; revenue: number }>();
   for (const item of itemResult.data ?? []) {
@@ -209,10 +252,12 @@ export async function getAdminReports(filters: AdminReportFilters = {}): Promise
       granularity,
       periodLabel: `${safeStartDate} — ${safeEndDate}`,
       cashflow,
-      metrics: { orderCount: activeOrders.length, paidOrderCount: paidOrders.length, revenue, expense, netCashflow, costCoverage, averageOrderValue: paidOrders.length ? Math.round(revenue / paidOrders.length) : 0 },
+      metrics: { orderCount: activeOrders.length, paidOrderCount: paidOrders.length, revenue, expense, operatingExpense, netCashflow, costCoverage, averageOrderValue: paidOrders.length ? Math.round(revenue / paidOrders.length) : 0 },
       stockModes,
       fulfillment,
       trend,
+      operatingExpenses,
+      canEditOperatingExpenses: access.role === "admin" || access.role === "staff",
       topProducts: Array.from(productMap.values()).sort((left, right) => right.revenue - left.revenue).slice(0, 5),
     },
     error: null,

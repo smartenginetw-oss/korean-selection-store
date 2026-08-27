@@ -12,6 +12,9 @@
 .linkList a:hover, .contact a:hover { color: #9b7b4b; }
 .contact { gap: 7px; }
 .contact span { margin-top: 7px; color: #6e7477; }
+.socialLinks { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+.socialLinks a { color: #26384c; font-size: .75rem; text-decoration: underline; text-underline-offset: 3px; }
+.socialLinks a:hover { color: #9b7b4b; }
 .meta { display: flex; flex-wrap: wrap; gap: 22px; padding: 20px 0; border-top: 1px solid #eee5c9; color: #26384c; font-size: .78rem; }
 .bottom { display: flex; justify-content: space-between; gap: 16px; padding-top: 18px; border-top: 1px solid #eee5c9; color: #8b8b86; font-size: .68rem; letter-spacing: .04em; }
 @media (min-width: 768px) {

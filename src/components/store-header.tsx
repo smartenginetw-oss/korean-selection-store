@@ -7,12 +7,12 @@ import { useCart } from "@/features/cart/cart-provider";
 import styles from "./store-header.module.css";
 
 const navigation = [
-  ["NEW", "/products?sort=newest"],
-  ["ALL", "/products"],
-  ["TOPS", "/products?category=tops"],
-  ["BOTTOMS", "/products?category=bottoms"],
-  ["OUTERWEAR", "/products?category=outerwear"],
-  ["ACCESSORIES", "/products?category=accessories"],
+  ["新品上架", "/products?sort=newest"],
+  ["全部商品", "/products"],
+  ["上衣", "/products?category=tops"],
+  ["下著", "/products?category=bottoms"],
+  ["外套", "/products?category=outerwear"],
+  ["配件", "/products?category=accessories"],
 ];
 
 function Icon({ name }: { name: "search" | "account" | "bag" }) {
@@ -51,7 +51,7 @@ export function StoreHeader() {
         </div>
         <div className={styles.mobileNavGroup}>
           <span className={styles.mobileNavTitle}>品牌資訊</span>
-          <Link className={styles.mobileNavLink} href="/about" onClick={() => setOpen(false)}>ABOUT</Link>
+          <Link className={styles.mobileNavLink} href="/about" onClick={() => setOpen(false)}>關於 GYEOT</Link>
           <Link className={styles.mobileNavLink} href="/shopping-guide" onClick={() => setOpen(false)}>購物說明</Link>
         </div>
       </nav>}

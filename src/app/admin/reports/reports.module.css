@@ -1,3 +1,4 @@
+.titleActions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
 .period { color: var(--color-text-secondary); font-size: .78rem; }
 .filters { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin-bottom: 16px; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
 .filterField { display: grid; flex: 1 1 150px; gap: 6px; min-width: 0; }
@@ -19,12 +20,18 @@
 .dateButton:hover, .dateButton:focus-visible { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgb(120 97 88 / 12%); }
 .dateButton:active { transform: scale(.99); }
 .dateButton svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--color-primary); }
-.calendar { position: absolute; z-index: 20; top: calc(100% + 8px); left: 0; width: 286px; padding: 14px; border: 1px solid var(--color-border); border-radius: 20px; background: #fffdfa; box-shadow: 0 18px 45px rgb(48 43 40 / 18%); animation: calendar-in 160ms ease-out; }
+.calendar { position: fixed; z-index: 80; width: 286px; max-width: calc(100vw - 24px); max-height: calc(100vh - 24px); overflow-y: auto; padding: 14px; border: 1px solid var(--color-border); border-radius: 20px; background: #fffdfa; box-shadow: 0 18px 45px rgb(48 43 40 / 18%); animation: calendar-in 160ms ease-out; }
 .calendarHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
 .calendarHeader strong { color: var(--color-text-primary); font-size: .88rem; }
 .calendarHeader button, .todayButton { border: 0; background: transparent; color: var(--color-primary); cursor: pointer; }
 .calendarHeader button { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font-size: 1.1rem; }
 .calendarHeader button:hover { background: var(--color-surface-muted); }
+.monthCalendar { min-height: 210px; }
+.monthGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.monthButton { min-height: 40px; border: 0; border-radius: 10px; background: transparent; color: var(--color-text-primary); cursor: pointer; font: inherit; font-size: .78rem; }
+.monthButton:hover { background: var(--color-surface-muted); }
+.monthSelected { background: var(--color-primary); color: #fff; font-weight: 700; }
+.monthSelected:hover { background: var(--color-primary-hover); }
 .weekdays, .calendarGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
 .weekdays { margin-bottom: 4px; color: var(--color-text-muted); font-size: .68rem; }
 .day { min-width: 0; aspect-ratio: 1; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--color-text-primary); cursor: pointer; font-size: .75rem; }
@@ -56,5 +63,6 @@
 .productRow b { font-size: .82rem; font-variant-numeric: tabular-nums; }
 .rank { color: var(--color-text-muted); font-family: Georgia, serif; font-size: .75rem; }
 .costNote { margin: 14px 0 0; color: var(--color-text-muted); font-size: .72rem; }
+.expenseForm { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; }.expenseForm label { display: grid; gap: 6px; color: var(--color-text-secondary); font-size: .75rem; font-weight: 700; }.expenseForm .input { min-height: 42px; }.expenseForm button { width: 100%; }.expenseNotes { grid-column: 1 / -1; }
 @media (min-width: 720px) { .metricGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }.split { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }.split .panel { min-width: 0; } }
 @media (max-width: 560px) { .calendar { right: 0; left: auto; width: min(286px, calc(100vw - 48px)); } }

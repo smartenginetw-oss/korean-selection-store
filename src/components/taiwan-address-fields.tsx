@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { districtsForCity, taiwanCities } from "@/lib/taiwan-address";
+import { RoundedSelect } from "./rounded-select";
 
 type TaiwanAddressFieldsProps = {
   className?: string;
@@ -27,39 +28,17 @@ export function TaiwanAddressFields({
   const [city, setCity] = useState(defaultCity);
   const [district, setDistrict] = useState(defaultDistrict);
   const districts = districtsForCity(city, district);
+  const cityOptions = [{ value: "", label: "請選擇縣市" }, ...taiwanCities.map((option) => ({ value: option, label: option }))];
+  const districtOptions = [{ value: "", label: city ? "請選擇區域" : "請先選擇縣市" }, ...districts.map((option) => ({ value: option, label: option }))];
 
   return <div className={className}>
     <div className="field">
       <label htmlFor={`${idPrefix}-city`}>縣市</label>
-      <select
-        className="input"
-        id={`${idPrefix}-city`}
-        name={cityName}
-        required
-        value={city}
-        onChange={(event) => {
-          setCity(event.target.value);
-          setDistrict("");
-        }}
-      >
-        <option value="" disabled>請選擇縣市</option>
-        {taiwanCities.map((option) => <option key={option} value={option}>{option}</option>)}
-      </select>
+      <RoundedSelect id={`${idPrefix}-city`} name={cityName} options={cityOptions} value={city} onValueChange={(value) => { setCity(value); setDistrict(""); }} ariaLabel="縣市" />
     </div>
     <div className="field">
       <label htmlFor={`${idPrefix}-district`}>區域</label>
-      <select
-        className="input"
-        id={`${idPrefix}-district`}
-        name={districtName}
-        required
-        value={district}
-        disabled={!city}
-        onChange={(event) => setDistrict(event.target.value)}
-      >
-        <option value="" disabled>{city ? "請選擇區域" : "請先選擇縣市"}</option>
-        {districts.map((option) => <option key={option} value={option}>{option}</option>)}
-      </select>
+      <RoundedSelect id={`${idPrefix}-district`} name={districtName} options={districtOptions} value={district} onValueChange={setDistrict} disabled={!city} ariaLabel="區域" />
     </div>
   </div>;
 }

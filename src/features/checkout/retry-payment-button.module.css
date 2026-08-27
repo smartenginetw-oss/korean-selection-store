@@ -1,0 +1,7 @@
+.wrapper { display: grid; justify-items: start; gap: 5px; margin-top: 16px; }
+.methodLabel { color: var(--color-text-secondary); font-size: .75rem; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.actions > div { min-width: 150px; }
+.hint, .error { font-size: .75rem; line-height: 1.5; }
+.hint { color: var(--color-text-secondary); }
+.error { color: #8f4d43; }

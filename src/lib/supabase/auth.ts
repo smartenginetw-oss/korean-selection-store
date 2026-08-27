@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
-import { BackofficeCapability, BackofficeRole, canAccess, isBackofficeRole } from "@/lib/supabase/roles";
+import { BackofficeCapability, BackofficeRole, canAccess, isBackofficeRole, isContentManager } from "@/lib/supabase/roles";
 
 const adminLoginPath = "/admin-login?next=%2Fadmin";
 
@@ -49,4 +49,9 @@ export const requireOrders = () => requireCapability("orders");
 export const requireCustomers = () => requireCapability("customers");
 export const requireCoupons = () => requireCapability("coupons");
 export const requireContent = () => requireCapability("content");
+export async function requireContentManager() {
+  const result = await requireAdmin();
+  if (!isContentManager(result.role)) redirect("/admin?notice=role_forbidden");
+  return result;
+}
 export const requireReports = () => requireCapability("reports");

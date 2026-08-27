@@ -1,0 +1,8 @@
+.card { display: grid; gap: 0; padding: 14px 16px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-muted); }
+.row { display: flex; justify-content: space-between; gap: 16px; padding-block: 8px; border-bottom: 1px solid var(--color-border); font-size: .84rem; }
+.row:last-of-type { border-bottom: 0; }
+.row span, .hint, .message { color: var(--color-text-secondary); }
+.row strong { text-align: right; font-weight: 600; }
+.hint, .message { font-size: .74rem; line-height: 1.5; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 12px; }
+@media (max-width: 520px) { .row { align-items: start; flex-direction: column; gap: 3px; }.row strong { text-align: left; } }

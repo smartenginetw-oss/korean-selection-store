@@ -1,1 +1,7 @@
 .error { border-radius: var(--radius-md); background: #f5e5e0; color: #8b4136; padding: 12px 14px; font-size: .82rem; line-height: 1.6; }
+.divider { display: flex; align-items: center; gap: 12px; color: var(--color-text-muted); font-size: .72rem; line-height: 1; }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--color-border); }
+.socialButton { margin-top: 0 !important; }
+.socialHint { margin: -8px 0 0; color: var(--color-text-muted); font-size: .72rem; line-height: 1.5; }
+.forgotLink { justify-self: start; color: var(--color-primary); font-size: .8rem; text-decoration: underline; text-underline-offset: 3px; }
+.forgotLink:hover { color: var(--color-primary-hover); }

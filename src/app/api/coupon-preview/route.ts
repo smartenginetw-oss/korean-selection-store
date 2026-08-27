@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const PreviewRequestSchema = z.object({
   couponCode: z.string().trim().min(1).max(40),
+  shippingMethod: z.enum(["home_delivery", "cvs_711", "cvs_family"]).default("home_delivery"),
   items: z.array(z.object({
     variantId: z.string().uuid(),
     quantity: z.number().int().min(1).max(10),
@@ -14,7 +15,9 @@ function errorResponse(message: string, status: number, code: string) {
 }
 
 function mapPreviewError(code?: string, detail?: string) {
-  if (code === "P0001") return errorResponse("商品規格已變更，請回到購物車重新確認。", 409, "inventory_conflict");
+  if (code === "P0001" || code === "inventory_conflict") return errorResponse("商品規格已變更，請回到購物車重新確認。", 409, "inventory_conflict");
+  if (code === "rate_limited") return errorResponse("操作太頻繁，請稍後再試。", 429, "rate_limited");
+  if (code === "rate_limit_unavailable") return errorResponse("目前無法驗證請求頻率，請稍後再試。", 503, "rate_limit_unavailable");
   if (code === "coupon_invalid" || (code === "22023" && detail?.toLowerCase().includes("coupon"))) {
     return errorResponse("優惠碼無效、已過期或未達使用門檻。", 400, "coupon_invalid");
   }

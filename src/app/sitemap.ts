@@ -6,6 +6,8 @@ import { siteUrl } from "@/lib/site";
 const publicPages = ["", "/products", "/about", "/shopping-guide", "/shipping", "/contact"];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  if ((process.env.NEXT_PUBLIC_APP_MODE ?? process.env.APP_MODE) === "admin") return [];
+
   const products = await getCatalog();
   return [
     ...publicPages.map((path) => ({ url: `${siteUrl}${path}`, changeFrequency: path === "" ? "weekly" as const : "monthly" as const, priority: path === "" ? 1 : 0.7 })),

@@ -8,4 +8,13 @@
 .timeRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: .72rem; }
 .timeRow input { min-height: 30px; padding: 4px 7px; border: 1px solid var(--color-border); border-radius: 10px; background: #fffdfa; color: var(--color-text-primary); }
 .calendarActions { display: flex; justify-content: space-between; margin-top: 4px; }
+.selectWrap { position: relative; width: 100%; }
+.selectTrigger { width: 100%; min-height: 48px; padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text-primary); cursor: pointer; text-align: left; }
+.selectTrigger:hover, .selectTrigger[aria-expanded="true"] { border-color: var(--color-primary); }
+.selectChevron { color: var(--color-text-secondary); font-size: 1.15rem; line-height: 1; transform: translateY(-2px); transition: transform 160ms ease; }
+.selectChevronOpen { transform: rotate(180deg) translateY(2px); }
+.selectMenu { position: absolute; z-index: 90; top: calc(100% + 8px); left: 0; width: 100%; padding: 6px; display: grid; gap: 3px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); box-shadow: 0 16px 34px rgb(48 38 31 / 16%); }
+.selectOption { width: 100%; min-height: 40px; padding: 8px 10px; border: 0; border-radius: 11px; background: transparent; color: var(--color-text-primary); cursor: pointer; text-align: left; }
+.selectOption:hover, .selectOption:focus-visible { background: var(--color-surface-muted); }
+.selectOptionSelected { background: var(--color-surface-muted); color: var(--color-primary); font-weight: 700; }
 @media (min-width: 720px) { .grid { grid-template-columns: minmax(0,1.4fr) minmax(260px,.6fr); }.formGrid { grid-template-columns: repeat(2, minmax(0,1fr)); } }

@@ -7,7 +7,7 @@ export default async function AdminCustomersPage() {
 
   return <>
     <div className={styles.titleRow}>
-      <div><div className="eyebrow">Customers · Privacy safe</div><h1 className="serif">顧客管理</h1></div>
+      <div><div className="eyebrow">顧客・隱私防護</div><h1 className="serif">顧客管理</h1></div>
       {metrics && <div className={styles.inventorySummary}><span>顧客 {metrics.customerCount}</span><span>有效訂單 {metrics.orderCount}</span><span>累積訂單額 {formatTwd(metrics.totalSpent)}</span></div>}
     </div>
     {error && <div className={styles.notice}>{error}</div>}

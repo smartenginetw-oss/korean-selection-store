@@ -1,4 +1,4 @@
-export const BACKOFFICE_ROLES = ["admin", "staff", "catalog_staff", "order_staff"] as const;
+export const BACKOFFICE_ROLES = ["admin", "partner", "staff", "catalog_staff", "order_staff"] as const;
 export type BackofficeRole = (typeof BACKOFFICE_ROLES)[number];
 
 export const EMPLOYEE_ROLES = ["staff", "catalog_staff", "order_staff"] as const;
@@ -16,6 +16,7 @@ export function isEmployeeRole(value: unknown): value is EmployeeRole {
 
 export function roleLabel(role: BackofficeRole) {
   if (role === "admin") return "老闆";
+  if (role === "partner") return "合夥人";
   if (role === "staff") return "全營運員工";
   if (role === "catalog_staff") return "商品／庫存";
   return "訂單／客服";
@@ -23,6 +24,7 @@ export function roleLabel(role: BackofficeRole) {
 
 export function roleDescription(role: BackofficeRole) {
   if (role === "admin") return "全部後台與團隊管理";
+  if (role === "partner") return "商品、訂單、顧客、優惠碼、內容與報表";
   if (role === "staff") return "商品、訂單、顧客、優惠碼、內容與報表";
   if (role === "catalog_staff") return "商品上架、商品圖片與庫存";
   return "訂單履約、顧客、優惠碼與報表";
@@ -30,7 +32,12 @@ export function roleDescription(role: BackofficeRole) {
 
 export function canAccess(role: BackofficeRole, capability: BackofficeCapability) {
   if (role === "admin") return true;
+  if (role === "partner") return capability !== "settings" && capability !== "staff";
   if (role === "staff") return capability !== "settings" && capability !== "staff";
   if (role === "catalog_staff") return capability === "catalog" || capability === "inventory";
   return capability === "orders" || capability === "customers" || capability === "coupons" || capability === "reports";
+}
+
+export function isContentManager(role: BackofficeRole) {
+  return role === "admin" || role === "partner";
 }

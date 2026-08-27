@@ -6,6 +6,7 @@ import styles from "./admin-shell.module.css";
 
 const sections: Array<[string, string, BackofficeCapability | null]> = [
   ["總覽", "/admin", null], ["商品", "/admin/products", "catalog"], ["新增商品", "/admin/products/new", "catalog"],
+  ["商品分類", "/admin/categories", "catalog"],
   ["庫存", "/admin/inventory", "inventory"], ["訂單", "/admin/orders", "orders"], ["顧客管理", "/admin/customers", "customers"],
   ["優惠碼管理", "/admin/coupons", "coupons"], ["內容管理", "/admin/content", "content"], ["報表分析", "/admin/reports", "reports"],
 ];
@@ -21,7 +22,7 @@ export function AdminShell({ children, email, role }: { children: React.ReactNod
     </aside>
     <div className={styles.content}>
       <header className={styles.header}>
-        <div><span className="badge badge-preorder">PREVIEW</span></div>
+        <div><span className="badge badge-preorder">預覽環境</span></div>
         <div className={styles.adminGroup}>
           <span className={`badge ${isOwner ? "badge-stock" : "badge-preorder"}`}>{roleLabel(role)}</span>
           <span className={styles.admin}>{email ?? "老闆"}</span>

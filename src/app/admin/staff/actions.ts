@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const StaffSchema = z.object({
   email: z.string().trim().email().max(254),
-  role: z.enum(["staff", "catalog_staff", "order_staff", "customer"]),
+  role: z.enum(["partner", "staff", "catalog_staff", "order_staff", "customer"]),
 });
 
 function staffRedirect(status: "updated" | "error", message?: string): never {
@@ -21,7 +21,7 @@ function staffRedirect(status: "updated" | "error", message?: string): never {
 export async function setStaffMemberAction(formData: FormData) {
   await requireOwner();
   const parsed = StaffSchema.safeParse({ email: formData.get("email"), role: formData.get("role") });
-  if (!parsed.success) staffRedirect("error", "請輸入正確的帳號 Email。");
+  if (!parsed.success) staffRedirect("error", "請輸入正確的帳號電子郵件。");
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_staff_member", { p_email: parsed.data.email, p_role: parsed.data.role });

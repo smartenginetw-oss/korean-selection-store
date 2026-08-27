@@ -1,0 +1,5 @@
+.notice { margin-bottom: 18px; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-warning-bg); color: var(--color-warning); font-size: .82rem; }
+.preview { max-width: 840px; }
+.meta, .footer { color: var(--color-text-muted); font-size: .78rem; }
+.body { margin-top: 20px; color: var(--color-text-secondary); font-size: 1.05rem; line-height: 1.9; white-space: pre-line; }
+.footer { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--color-border); }

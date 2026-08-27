@@ -3,6 +3,12 @@ import { requireOrders } from "@/lib/supabase/auth";
 
 const fulfillmentFilters = ["unfulfilled", "awaiting_stock", "processing", "shipped", "delivered", "cancelled"] as const;
 export type FulfillmentFilter = (typeof fulfillmentFilters)[number];
+const paymentFilters = ["pending", "paid", "failed", "refunded", "partially_refunded"] as const;
+export type PaymentFilter = (typeof paymentFilters)[number];
+const orderFilters = ["pending_payment", "confirmed", "completed", "cancelled", "expired", "exception"] as const;
+export type OrderFilter = (typeof orderFilters)[number];
+const shippingFilters = ["home_delivery", "cvs_711", "cvs_family"] as const;
+export type ShippingFilter = (typeof shippingFilters)[number];
 
 export type AdminOrderSummary = {
   id: string;
@@ -12,6 +18,7 @@ export type AdminOrderSummary = {
   stockMode: string;
   paymentStatus: string;
   fulfillmentStatus: string;
+  orderStatus: string;
   grandTotal: number;
   createdAt: string;
   shipment: AdminShipmentSummary | null;
@@ -19,8 +26,14 @@ export type AdminOrderSummary = {
 
 export type AdminShipmentSummary = {
   id: string;
-  carrier: string;
-  trackingNumber: string;
+  carrier: string | null;
+  trackingNumber: string | null;
+  shippingMethod: string;
+  provider: string;
+  storeCode: string | null;
+  storeName: string | null;
+  storeAddress: string | null;
+  shippingFee: number;
   status: string;
   shippedAt: string | null;
   deliveredAt: string | null;
@@ -83,7 +96,10 @@ export type AdminOrderDetail = {
     id: string;
     provider: string;
     amount: number;
+    refundedAmount: number;
     status: string;
+    paymentMethod: string;
+    paymentInfo: Record<string, string>;
     providerPaymentId: string | null;
     failureMessage: string | null;
     paidAt: string | null;
@@ -112,6 +128,7 @@ function mapOrder(row: {
   stock_mode: string;
   payment_status: string;
   fulfillment_status: string;
+  order_status: string;
   grand_total: number;
   created_at: string;
 }, shipment: AdminShipmentSummary | null = null): AdminOrderSummary {
@@ -123,6 +140,7 @@ function mapOrder(row: {
     stockMode: row.stock_mode,
     paymentStatus: row.payment_status,
     fulfillmentStatus: row.fulfillment_status,
+    orderStatus: row.order_status,
     grandTotal: row.grand_total,
     createdAt: row.created_at,
     shipment,
@@ -133,7 +151,7 @@ async function getLatestShipments(supabase: Awaited<ReturnType<typeof createClie
   if (!orderIds.length) return new Map<string, AdminShipmentSummary>();
   const { data, error } = await supabase
     .from("shipments")
-    .select("id,order_id,carrier,tracking_number,status,shipped_at,delivered_at,created_at")
+    .select("id,order_id,carrier,tracking_number,shipping_method,provider,store_code,store_name,store_address,shipping_fee,status,shipped_at,delivered_at,created_at")
     .in("order_id", orderIds)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -145,6 +163,12 @@ async function getLatestShipments(supabase: Awaited<ReturnType<typeof createClie
       id: row.id,
       carrier: row.carrier,
       trackingNumber: row.tracking_number,
+      shippingMethod: row.shipping_method,
+      provider: row.provider,
+      storeCode: row.store_code,
+      storeName: row.store_name,
+      storeAddress: row.store_address,
+      shippingFee: row.shipping_fee,
       status: row.status,
       shippedAt: row.shipped_at,
       deliveredAt: row.delivered_at,
@@ -157,28 +181,55 @@ export function isFulfillmentFilter(value: string | undefined): value is Fulfill
   return Boolean(value && fulfillmentFilters.includes(value as FulfillmentFilter));
 }
 
-export async function getAdminOrders(filter?: FulfillmentFilter, limit = 100) {
+export function isPaymentFilter(value: string | undefined): value is PaymentFilter {
+  return Boolean(value && paymentFilters.includes(value as PaymentFilter));
+}
+
+export function isOrderFilter(value: string | undefined): value is OrderFilter {
+  return Boolean(value && orderFilters.includes(value as OrderFilter));
+}
+
+export function isShippingFilter(value: string | undefined): value is ShippingFilter {
+  return Boolean(value && shippingFilters.includes(value as ShippingFilter));
+}
+
+function normalizeOrderSearch(value: string | undefined) {
+  return value?.trim().replace(/[\\%_(),*]/g, " ").replace(/\s+/g, " ").slice(0, 80) ?? "";
+}
+
+export async function getAdminOrders(fulfillmentFilter?: FulfillmentFilter, limit = 100, search?: string, paymentFilter?: PaymentFilter, orderFilter?: OrderFilter, page = 1, shippingFilter?: ShippingFilter) {
   await requireOrders();
   const supabase = await createClient();
+  const pageSize = Math.min(5000, Math.max(1, Math.floor(limit)));
+  const currentPage = Math.max(1, Math.floor(Number.isFinite(page) ? page : 1));
+  const offset = (currentPage - 1) * pageSize;
   let query = supabase
     .from("orders")
-    .select("id,order_number,recipient_name,email,stock_mode,payment_status,fulfillment_status,grand_total,created_at")
+    .select("id,order_number,recipient_name,email,stock_mode,payment_status,fulfillment_status,order_status,grand_total,created_at", { count: "exact" })
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .range(offset, offset + pageSize - 1);
 
-  if (filter) query = query.eq("fulfillment_status", filter);
-  const { data, error } = await query;
+  if (fulfillmentFilter) query = query.eq("fulfillment_status", fulfillmentFilter);
+  if (paymentFilter) query = query.eq("payment_status", paymentFilter);
+  if (orderFilter) query = query.eq("order_status", orderFilter);
+  if (shippingFilter) query = query.eq("shipping_method", shippingFilter);
+  const normalizedSearch = normalizeOrderSearch(search);
+  if (normalizedSearch) {
+    query = query.or(`order_number.ilike.*${normalizedSearch}*,email.ilike.*${normalizedSearch}*,recipient_name.ilike.*${normalizedSearch}*`);
+  }
+  const { data, count, error } = await query;
   if (error) {
     console.error("[admin/orders] read failed", error.message);
-    return { orders: [] as AdminOrderSummary[], error: "訂單資料目前無法讀取。" };
+    return { orders: [] as AdminOrderSummary[], total: 0, page: currentPage, pageSize, totalPages: 0, error: "訂單資料目前無法讀取。" };
   }
 
   try {
     const shipments = await getLatestShipments(supabase, (data ?? []).map((row) => row.id));
-    return { orders: (data ?? []).map((row) => mapOrder(row, shipments.get(row.id) ?? null)), error: null };
+    const total = count ?? 0;
+    return { orders: (data ?? []).map((row) => mapOrder(row, shipments.get(row.id) ?? null)), total, page: currentPage, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)), error: null };
   } catch (shipmentError) {
     console.error("[admin/orders] shipment read failed", shipmentError instanceof Error ? shipmentError.message : shipmentError);
-    return { orders: [], error: "訂單出貨資料目前無法讀取。" };
+    return { orders: [], total: 0, page: currentPage, pageSize, totalPages: 0, error: "訂單出貨資料目前無法讀取。" };
   }
 }
 
@@ -210,12 +261,12 @@ export async function getAdminOrderDetail(orderId: string) {
       .order("created_at", { ascending: true }),
     supabase
       .from("payments")
-      .select("id,provider,amount,status,provider_payment_id,failure_message,paid_at,created_at")
+      .select("id,provider,amount,refunded_amount,status,payment_method,payment_info,provider_payment_id,failure_message,paid_at,created_at")
       .eq("order_id", orderId)
       .order("created_at", { ascending: false }),
     supabase
       .from("shipments")
-      .select("id,carrier,tracking_number,status,shipped_at,delivered_at,created_at")
+      .select("id,carrier,tracking_number,shipping_method,provider,store_code,store_name,store_address,shipping_fee,status,shipped_at,delivered_at,created_at")
       .eq("order_id", orderId)
       .order("created_at", { ascending: false }),
     supabase
@@ -276,7 +327,10 @@ export async function getAdminOrderDetail(orderId: string) {
       id: payment.id,
       provider: payment.provider,
       amount: payment.amount,
+      refundedAmount: payment.refunded_amount,
       status: payment.status,
+      paymentMethod: payment.payment_method,
+      paymentInfo: asStringRecord(payment.payment_info),
       providerPaymentId: payment.provider_payment_id,
       failureMessage: payment.failure_message,
       paidAt: payment.paid_at,
@@ -286,6 +340,12 @@ export async function getAdminOrderDetail(orderId: string) {
       id: shipment.id,
       carrier: shipment.carrier,
       trackingNumber: shipment.tracking_number,
+      shippingMethod: shipment.shipping_method,
+      provider: shipment.provider,
+      storeCode: shipment.store_code,
+      storeName: shipment.store_name,
+      storeAddress: shipment.store_address,
+      shippingFee: shipment.shipping_fee,
       status: shipment.status,
       shippedAt: shipment.shipped_at,
       deliveredAt: shipment.delivered_at,
@@ -309,13 +369,17 @@ function taipeiDateKey(value: Date) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(value);
 }
 
+function taipeiMonthKey(value: Date) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit" }).format(value);
+}
+
 export async function getAdminDashboardData() {
   await requireOrders();
   const supabase = await createClient();
   const [ordersResult, inventoryResult] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,order_number,recipient_name,email,stock_mode,payment_status,fulfillment_status,grand_total,created_at")
+      .select("id,order_number,recipient_name,email,stock_mode,payment_status,fulfillment_status,order_status,grand_total,created_at")
       .order("created_at", { ascending: false })
       .limit(1000),
     supabase.from("inventory_levels").select("variant_id,on_hand,reserved,low_stock_threshold").order("on_hand", { ascending: true }).limit(20),
@@ -327,23 +391,63 @@ export async function getAdminDashboardData() {
   }
 
   const rawOrders = ordersResult.data ?? [];
+  const activeOrders = rawOrders.filter((order) => order.order_status !== "cancelled" && order.fulfillment_status !== "cancelled");
   const today = taipeiDateKey(new Date());
-  const todayOrders = rawOrders.filter((order) => taipeiDateKey(new Date(order.created_at)) === today);
-  const paidToday = todayOrders.filter((order) => order.payment_status === "paid");
+  const todayOrders = activeOrders.filter((order) => taipeiDateKey(new Date(order.created_at)) === today);
+  const paidOrders = activeOrders.filter((order) => order.payment_status === "paid");
+  const paidToday = paidOrders.filter((order) => taipeiDateKey(new Date(order.created_at)) === today);
+  const paidMonth = paidOrders.filter((order) => taipeiMonthKey(new Date(order.created_at)) === taipeiMonthKey(new Date()));
   const revenueToday = paidToday.reduce((total, order) => total + order.grand_total, 0);
-  const pendingShipping = rawOrders.filter((order) => !["shipped", "delivered", "cancelled"].includes(order.fulfillment_status)).length;
+  const revenueMonth = paidMonth.reduce((total, order) => total + order.grand_total, 0);
+  const pendingShipping = paidOrders.filter((order) => !["shipped", "delivered", "cancelled"].includes(order.fulfillment_status)).length;
+
+  const paidOrderIds = paidOrders.map((order) => order.id);
+  const orderItemsResult = paidOrderIds.length
+    ? await supabase.from("order_items").select("order_id,product_name,quantity,line_total").in("order_id", paidOrderIds)
+    : { data: [], error: null };
+  if (orderItemsResult.error) {
+    console.error("[admin/dashboard] order item read failed", orderItemsResult.error.message);
+    return { orders: [], lowStock: [], metrics: null, trend: [], topProducts: [], error: "Dashboard 商品統計目前無法讀取。" };
+  }
+  const productMap = new Map<string, { name: string; quantity: number; revenue: number }>();
+  for (const item of orderItemsResult.data ?? []) {
+    const current = productMap.get(item.product_name) ?? { name: item.product_name, quantity: 0, revenue: 0 };
+    current.quantity += item.quantity;
+    current.revenue += item.line_total;
+    productMap.set(item.product_name, current);
+  }
+  const trend = Array.from({ length: 14 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (13 - index));
+    const key = taipeiDateKey(date);
+    const dayOrders = paidOrders.filter((order) => taipeiDateKey(new Date(order.created_at)) === key);
+    return { date: key, label: key.slice(5).replace("-", "/"), orders: dayOrders.length, revenue: dayOrders.reduce((sum, order) => sum + order.grand_total, 0) };
+  });
 
   const inventoryRows = inventoryResult.data ?? [];
   const variantIds = inventoryRows.map((row) => row.variant_id);
-  const variantsResult = variantIds.length ? await supabase.from("product_variants").select("id,sku,product_id").in("id", variantIds) : { data: [], error: null };
+  const variantsResult = variantIds.length
+    ? await supabase.from("product_variants").select("id,sku,product_id,fulfillment_mode").in("id", variantIds)
+    : { data: [], error: null };
   const productIds = (variantsResult.data ?? []).map((row) => row.product_id);
   const productsResult = productIds.length ? await supabase.from("products").select("id,name").in("id", productIds) : { data: [], error: null };
   const variantsById = new Map((variantsResult.data ?? []).map((row) => [row.id, row]));
   const productsById = new Map((productsResult.data ?? []).map((row) => [row.id, row]));
-  const lowStock = inventoryRows.filter((row) => row.on_hand - row.reserved <= row.low_stock_threshold).slice(0, 5).map((row) => {
+  const lowStock = inventoryRows
+    .filter((row) => {
+      const variant = variantsById.get(row.variant_id);
+      // 預購不依賴現貨庫存，不應在總覽被列為低庫存。
+      if (variant?.fulfillment_mode === "preorder") return false;
+      return Math.max(0, row.on_hand - row.reserved) <= row.low_stock_threshold;
+    })
+    .slice(0, 5)
+    .map((row) => {
     const variant = variantsById.get(row.variant_id);
     const product = variant ? productsById.get(variant.product_id) : undefined;
-    return { label: `${product?.name ?? "未命名商品"}／${variant?.sku ?? row.variant_id.slice(0, 8)}`, available: row.on_hand - row.reserved };
+    return {
+      label: `${product?.name ?? "未命名商品"}／${variant?.sku ?? row.variant_id.slice(0, 8)}`,
+      available: Math.max(0, row.on_hand - row.reserved),
+    };
   });
 
   return {
@@ -351,10 +455,13 @@ export async function getAdminDashboardData() {
     lowStock,
     metrics: {
       revenueToday,
+      revenueMonth,
       orderCountToday: todayOrders.length,
       pendingShipping,
       averageOrderValue: paidToday.length ? Math.round(revenueToday / paidToday.length) : 0,
     },
+    trend,
+    topProducts: Array.from(productMap.values()).sort((left, right) => right.revenue - left.revenue).slice(0, 5),
     error: null,
   };
 }

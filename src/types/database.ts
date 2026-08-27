@@ -403,6 +403,56 @@ export type Database = {
           },
         ]
       }
+      operating_expenses: {
+        Row: {
+          advertising_cost: number
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string
+          other_cost: number
+          packaging_cost: number
+          period_month: string
+          rent_cost: number
+          shipping_cost: number
+          updated_at: string
+        }
+        Insert: {
+          advertising_cost?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string
+          other_cost?: number
+          packaging_cost?: number
+          period_month: string
+          rent_cost?: number
+          shipping_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          advertising_cost?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string
+          other_cost?: number
+          packaging_cost?: number
+          period_month?: string
+          rent_cost?: number
+          shipping_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operating_expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -702,6 +752,8 @@ export type Database = {
           idempotency_key: string
           order_id: string
           paid_at: string | null
+          payment_info: Json
+          payment_method: string
           provider: string
           provider_payment_id: string | null
           refunded_amount: number
@@ -719,6 +771,8 @@ export type Database = {
           idempotency_key: string
           order_id: string
           paid_at?: string | null
+          payment_info?: Json
+          payment_method?: string
           provider: string
           provider_payment_id?: string | null
           refunded_amount?: number
@@ -736,6 +790,8 @@ export type Database = {
           idempotency_key?: string
           order_id?: string
           paid_at?: string | null
+          payment_info?: Json
+          payment_method?: string
           provider?: string
           provider_payment_id?: string | null
           refunded_amount?: number
@@ -955,6 +1011,11 @@ export type Database = {
       }
       products: {
         Row: {
+          allocated_ad_cost: number
+          allocated_other_cost: number
+          allocated_packaging_cost: number
+          allocated_rent_cost: number
+          allocated_shipping_cost: number
           archived_at: string | null
           care_instructions: string | null
           cost_price: number | null
@@ -975,6 +1036,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allocated_ad_cost?: number
+          allocated_other_cost?: number
+          allocated_packaging_cost?: number
+          allocated_rent_cost?: number
+          allocated_shipping_cost?: number
           archived_at?: string | null
           care_instructions?: string | null
           cost_price?: number | null
@@ -995,6 +1061,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allocated_ad_cost?: number
+          allocated_other_cost?: number
+          allocated_packaging_cost?: number
+          allocated_rent_cost?: number
+          allocated_shipping_cost?: number
           archived_at?: string | null
           care_instructions?: string | null
           cost_price?: number | null
@@ -1042,31 +1113,49 @@ export type Database = {
       }
       store_settings: {
         Row: {
+          cvs_711_fee: number
+          cvs_family_fee: number
           brand_name: string
+          facebook_url: string | null
+          instagram_url: string | null
+          line_official_url: string | null
           preorder_enabled: boolean
           reservation_minutes: number
           shipping_fee: number
           support_email: string
+          threads_url: string | null
           updated_at: string
           updated_by: string | null
           id: boolean
         }
         Insert: {
+          cvs_711_fee?: number
+          cvs_family_fee?: number
           brand_name?: string
+          facebook_url?: string | null
+          instagram_url?: string | null
+          line_official_url?: string | null
           preorder_enabled?: boolean
           reservation_minutes?: number
           shipping_fee?: number
           support_email?: string
+          threads_url?: string | null
           updated_at?: string
           updated_by?: string | null
           id?: boolean
         }
         Update: {
+          cvs_711_fee?: number
+          cvs_family_fee?: number
           brand_name?: string
+          facebook_url?: string | null
+          instagram_url?: string | null
+          line_official_url?: string | null
           preorder_enabled?: boolean
           reservation_minutes?: number
           shipping_fee?: number
           support_email?: string
+          threads_url?: string | null
           updated_at?: string
           updated_by?: string | null
           id?: boolean
@@ -1100,38 +1189,119 @@ export type Database = {
         }
         Relationships: []
       }
+      store_home_collections: {
+        Row: {
+          created_at: string
+          description: string
+          eyebrow: string
+          href: string
+          id: string
+          is_published: boolean
+          slug: string
+          sort_order: number
+          title: string
+          tone: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          eyebrow: string
+          href: string
+          id?: string
+          is_published?: boolean
+          slug: string
+          sort_order?: number
+          title: string
+          tone: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          eyebrow?: string
+          href?: string
+          id?: string
+          is_published?: boolean
+          slug?: string
+          sort_order?: number
+          title?: string
+          tone?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       shipments: {
         Row: {
-          carrier: string
+          address_line: string | null
+          carrier: string | null
+          city: string | null
           created_at: string
+          district: string | null
           delivered_at: string | null
           id: string
           order_id: string
+          postal_code: string | null
+          provider: string
+          recipient_name: string | null
+          recipient_phone: string | null
           shipped_at: string | null
+          shipping_fee: number
+          shipping_method: string
+          store_address: string | null
+          store_code: string | null
+          store_name: string | null
           status: string
-          tracking_number: string
+          tracking_number: string | null
           updated_at: string
         }
         Insert: {
-          carrier: string
+          address_line?: string | null
+          carrier?: string | null
+          city?: string | null
           created_at?: string
+          district?: string | null
           delivered_at?: string | null
           id?: string
           order_id: string
+          postal_code?: string | null
+          provider?: string
+          recipient_name?: string | null
+          recipient_phone?: string | null
           shipped_at?: string | null
+          shipping_fee?: number
+          shipping_method?: string
+          store_address?: string | null
+          store_code?: string | null
+          store_name?: string | null
           status?: string
-          tracking_number: string
+          tracking_number?: string | null
           updated_at?: string
         }
         Update: {
-          carrier?: string
+          address_line?: string | null
+          carrier?: string | null
+          city?: string | null
           created_at?: string
+          district?: string | null
           delivered_at?: string | null
           id?: string
           order_id?: string
+          postal_code?: string | null
+          provider?: string
+          recipient_name?: string | null
+          recipient_phone?: string | null
           shipped_at?: string | null
+          shipping_fee?: number
+          shipping_method?: string
+          store_address?: string | null
+          store_code?: string | null
+          store_name?: string | null
           status?: string
-          tracking_number?: string
+          tracking_number?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1211,6 +1381,44 @@ export type Database = {
         Args: { p_product_id: string; p_payload: Json }
         Returns: Json
       }
+      update_admin_product_tags: {
+        Args: { p_product_id: string; p_tags: string[] | null }
+        Returns: Json
+      }
+      update_admin_product_details: {
+        Args: { p_product_id: string; p_payload: Json }
+        Returns: Json
+      }
+      update_admin_product_financials: {
+        Args: { p_product_id: string; p_payload: Json }
+        Returns: Json
+      }
+      set_admin_product_status: {
+        Args: { p_product_id: string; p_status: string }
+        Returns: Json
+      }
+      delete_admin_product: {
+        Args: { p_product_id: string }
+        Returns: Json
+      }
+      get_public_variant_availability: {
+        Args: { p_variant_ids: string[] }
+        Returns: {
+          variant_id: string
+          is_available: boolean
+        }[]
+      }
+      get_public_best_sellers: {
+        Args: { p_limit?: number }
+        Returns: {
+          product_id: string
+          sold_quantity: number
+        }[]
+      }
+      upsert_admin_operating_expense: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
       adjust_admin_inventory: {
         Args: { p_low_stock_threshold: number; p_on_hand: number; p_reason: string; p_variant_id: string }
         Returns: Json
@@ -1219,12 +1427,36 @@ export type Database = {
         Args: { p_payload: Json }
         Returns: Json
       }
+      update_admin_order_shipment: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
+      refund_admin_order: {
+        Args: { p_order_id: string; p_refund_amount: number | null; p_reason: string | null }
+        Returns: Json
+      }
       create_checkout_order: {
         Args: { p_idempotency_key: string; p_payload: Json }
         Returns: Json
       }
       create_checkout_order_for_member: {
         Args: { p_idempotency_key: string; p_payload: Json; p_profile_id: string | null }
+        Returns: Json
+      }
+      create_ecpay_checkout_order_for_member: {
+        Args: { p_idempotency_key: string; p_payload: Json; p_profile_id: string | null }
+        Returns: Json
+      }
+      record_ecpay_payment_callback: {
+        Args: {
+          p_merchant_trade_no: string
+          p_payment_date: string | null
+          p_payment_type: string | null
+          p_rtn_code: string
+          p_rtn_msg: string | null
+          p_trade_amt: number
+          p_trade_no: string | null
+        }
         Returns: Json
       }
       preview_coupon_discount: {

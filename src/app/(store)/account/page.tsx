@@ -3,20 +3,27 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { TaiwanAddressFields } from "@/components/taiwan-address-fields";
+import { AccountPasswordForm } from "@/components/account-password-form";
+import { fulfillmentStatusLabels, paymentStatusLabels } from "@/features/orders/order-status-labels";
 import { createAddressAction, deleteAddressAction, setDefaultAddressAction, signOutMember, updateAddressAction, updateProfileAction } from "./actions";
 import styles from "./account.module.css";
 
 export const metadata = { title: "會員中心" };
 export const dynamic = "force-dynamic";
 
-const paymentLabels: Record<string, string> = { pending: "待付款", paid: "已付款", failed: "付款失敗", refunded: "已退款", partially_refunded: "部分退款" };
-const fulfillmentLabels: Record<string, string> = { unfulfilled: "待處理", awaiting_stock: "等待到貨", processing: "處理中", shipped: "已出貨", delivered: "已送達", cancelled: "已取消" };
 function formatTwd(value: number) {
   return new Intl.NumberFormat("zh-TW", { style: "currency", currency: "TWD", maximumFractionDigits: 0 }).format(value);
 }
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("zh-TW", { year: "numeric", month: "short", day: "numeric" });
+}
+
+function getOrderFulfillmentLabel(order: { order_status: string; payment_status: string; fulfillment_status: string }) {
+  if (order.order_status === "exception") return "付款已完成，庫存待人工確認";
+  if (order.payment_status === "failed") return "付款未完成";
+  if (order.payment_status === "pending") return "等待付款確認";
+  return fulfillmentStatusLabels[order.fulfillment_status] ?? "狀態更新";
 }
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
@@ -94,14 +101,20 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           <label className={styles.checkbox}><input type="checkbox" name="isDefault" />設為預設地址</label>
           <button className="button button-secondary button-small" type="submit">儲存地址</button>
         </form></details>
-        <p className={styles.hint}>V1 僅提供台灣宅配；地址操作只會影響你自己的會員資料。</p>
+        <p className={styles.hint}>宅配地址只會套用於宅配訂單；超商取貨可在結帳時選擇門市。地址操作只會影響你自己的會員資料。</p>
+      </section>
+
+      <section className={styles.panel} aria-labelledby="password-heading">
+        <h2 id="password-heading">密碼安全</h2>
+        <p className={styles.hint}>可隨時更新登入密碼，至少 8 碼；請勿與其他網站共用相同密碼。</p>
+        <AccountPasswordForm />
       </section>
 
       <section className={`${styles.panel} ${styles.orders}`} aria-labelledby="orders-heading">
         <h2 id="orders-heading">我的訂單</h2>
         {orders.length ? <div className={styles.orderList}>{orders.map((order) => <Link className={styles.order} href={`/account/orders/${order.id}`} key={order.id}>
-          <div className={styles.orderMain}><strong>{order.order_number}</strong><span>{formatDate(order.created_at)} · {fulfillmentLabels[order.fulfillment_status] ?? order.fulfillment_status}</span></div>
-          <div className={styles.orderAside}><strong>{formatTwd(order.grand_total)}</strong><span>{paymentLabels[order.payment_status] ?? order.payment_status}</span></div>
+          <div className={styles.orderMain}><strong>{order.order_number}</strong><span>{formatDate(order.created_at)} · {getOrderFulfillmentLabel(order)}</span></div>
+          <div className={styles.orderAside}><strong>{formatTwd(order.grand_total)}</strong><span>{paymentStatusLabels[order.payment_status] ?? "狀態更新"}</span></div>
         </Link>)}</div> : <p className={styles.empty}>目前還沒有綁定到這個會員的訂單；訪客結帳仍可正常完成。</p>}
       </section>
 

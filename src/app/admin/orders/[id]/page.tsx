@@ -2,46 +2,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { OrderActions } from "@/features/orders/admin/order-actions";
+import { RefundOrderForm } from "@/features/orders/admin/refund-order-form";
 import { getAdminOrderDetail } from "@/features/orders/admin/server";
+import { fulfillmentStatusLabels, formatActorLabel, formatStatusLabel, formatTimelineEventLabel, formatTimelineNote, paymentStatusLabels, shipmentStatusLabels } from "@/features/orders/order-status-labels";
 import { formatTwd } from "@/lib/money";
+import { shippingMethodLabel, isConvenienceStoreMethod } from "@/lib/shipping";
 import styles from "../../admin.module.css";
 
-const fulfillmentLabels: Record<string, string> = {
-  unfulfilled: "未處理",
-  awaiting_stock: "等待到貨",
-  processing: "處理中",
-  shipped: "已出貨",
-  delivered: "已送達",
-  cancelled: "已取消",
+const fulfillmentLabels: Record<string, string> = { ...fulfillmentStatusLabels };
+const paymentLabels: Record<string, string> = { ...paymentStatusLabels };
+
+const paymentMethodLabels: Record<string, string> = {
+  test: "測試付款",
+  credit: "ECPay 信用卡",
+  atm: "ECPay ATM 虛擬帳號",
+  cvs: "ECPay 超商代碼",
 };
 
-const paymentLabels: Record<string, string> = {
-  pending: "待付款",
-  paid: "已付款",
-  failed: "付款失敗",
-  refunded: "已退款",
-  partially_refunded: "部分退款",
-};
-
-const eventLabels: Record<string, string> = {
-  order_created: "訂單已建立",
-  checkout_created: "訂單已建立",
-  inventory_reserved: "庫存已保留",
-  payment_succeeded: "付款已完成",
-  fulfillment_status_changed: "履約狀態更新",
-  payment_status_changed: "付款狀態更新",
-  shipment_created: "出貨資訊已建立",
-  order_cancelled: "訂單已取消",
-  order_completed: "訂單已完成",
-};
-
-function formatTimelineNote(note: string | null) {
-  if (!note) return "";
-  if (note === "Test payment adapter confirmed the order.") return "測試付款已確認訂單。";
-  const inventoryMatch = note.match(/^Inventory held for (\d+) minutes\.$/);
-  if (inventoryMatch) return `庫存已保留 ${inventoryMatch[1]} 分鐘。`;
-  return note;
-}
+const shipmentLabels: Record<string, string> = { ...shipmentStatusLabels };
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("zh-TW", {
@@ -60,8 +38,13 @@ function optionsLabel(options: Record<string, string>) {
   return values.length ? values.join("／") : "未指定規格";
 }
 
-function actorLabel(value: string) {
-  return value === "admin" ? "老闆" : value === "customer" ? "顧客" : "系統";
+function paymentInfoRows(payment: { paymentMethod: string; paymentInfo: Record<string, string> }) {
+  const rows: Array<[string, string]> = [];
+  if (payment.paymentMethod === "atm" && payment.paymentInfo.bankCode) rows.push(["銀行代碼", payment.paymentInfo.bankCode]);
+  if (payment.paymentMethod === "atm" && payment.paymentInfo.vAccount) rows.push(["虛擬帳號", payment.paymentInfo.vAccount]);
+  if (payment.paymentMethod === "cvs" && payment.paymentInfo.paymentNo) rows.push(["繳費代碼", payment.paymentInfo.paymentNo]);
+  if (payment.paymentInfo.expireDate) rows.push(["繳費期限", payment.paymentInfo.expireDate]);
+  return rows;
 }
 
 export default async function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -74,6 +57,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
   }
 
   const latestShipment = order.shipments[0] ?? null;
+  const refundableAmount = order.payments.reduce((total, payment) => total + Math.max(0, payment.amount - payment.refundedAmount), 0);
   const actionOrder = {
     id: order.id,
     orderNumber: order.orderNumber,
@@ -82,6 +66,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
     stockMode: order.stockMode,
     paymentStatus: order.paymentStatus,
     fulfillmentStatus: order.fulfillmentStatus,
+    orderStatus: order.orderStatus,
     grandTotal: order.grandTotal,
     createdAt: order.createdAt,
     shipment: latestShipment,
@@ -91,13 +76,13 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
     <div className={styles.titleRow}>
       <div>
         <Link className={styles.backLink} href="/admin/orders">← 返回訂單管理</Link>
-        <div className="eyebrow">Order detail · Supabase</div>
+         <div className="eyebrow">訂單明細・資料庫</div>
         <h1 className="serif">{order.orderNumber}</h1>
         <p className={styles.detailMeta}>建立於 {formatDate(order.createdAt)} · 最後更新 {formatDate(order.updatedAt)}</p>
       </div>
       <div className={styles.statusRow}>
-        <span className={`badge ${order.paymentStatus === "paid" ? "badge-stock" : "badge-preorder"}`}>{paymentLabels[order.paymentStatus] ?? order.paymentStatus}</span>
-        <span className="badge badge-preorder">{fulfillmentLabels[order.fulfillmentStatus] ?? order.fulfillmentStatus}</span>
+        <span className={`badge ${order.paymentStatus === "paid" ? "badge-stock" : "badge-preorder"}`}>{paymentLabels[order.paymentStatus] ?? "狀態更新"}</span>
+        <span className="badge badge-preorder">{fulfillmentLabels[order.fulfillmentStatus] ?? "狀態更新"}</span>
       </div>
     </div>
 
@@ -121,14 +106,19 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
         </section>
 
         <section className={styles.panel}>
-          <div className={styles.panelHeading}><h2>訂單 Timeline</h2><span>{order.timeline.length} 筆紀錄</span></div>
+          <div className={styles.panelHeading}><h2>訂單進度</h2><span>{order.timeline.length} 筆紀錄</span></div>
           {order.timeline.length ? <ol className={styles.timeline}>{order.timeline.map((event) => <li key={event.id} className={styles.timelineItem}>
             <div className={styles.timelineDot} aria-hidden="true" />
-            <div><strong>{eventLabels[event.eventType] ?? event.eventType}</strong><small>{formatDate(event.createdAt)} · {actorLabel(event.actorType)}</small>
-              {(event.fromStatus || event.toStatus) && <p>{event.fromStatus ? (fulfillmentLabels[event.fromStatus] ?? event.fromStatus) : "開始"} → {event.toStatus ? (fulfillmentLabels[event.toStatus] ?? event.toStatus) : "—"}</p>}
+            <div><strong>{formatTimelineEventLabel(event.eventType, event.toStatus)}</strong><small>{formatDate(event.createdAt)} · {formatActorLabel(event.actorType)}</small>
+              {(event.fromStatus || event.toStatus) && <p>{event.fromStatus ? formatStatusLabel(event.fromStatus) : "開始"} → {event.toStatus ? formatStatusLabel(event.toStatus) : "—"}</p>}
               {formatTimelineNote(event.note) && <p>{formatTimelineNote(event.note)}</p>}
             </div>
-          </li>)}</ol> : <p className={styles.empty}>目前尚無 Timeline 紀錄。</p>}
+           </li>)}</ol> : <p className={styles.empty}>目前尚無訂單進度紀錄。</p>}
+        </section>
+
+        <section className={styles.panel}>
+          <div className={styles.panelHeading}><h2>退款</h2><span>{refundableAmount > 0 ? `可退 ${formatTwd(refundableAmount)}` : "無可退餘額"}</span></div>
+          <RefundOrderForm orderId={order.id} refundableAmount={refundableAmount} />
         </section>
       </div>
 
@@ -139,7 +129,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
             <div><dt>商品小計</dt><dd>{formatTwd(order.subtotal)}</dd></div>
             <div><dt>折扣</dt><dd>{order.discountTotal ? `−${formatTwd(order.discountTotal)}` : formatTwd(0)}</dd></div>
             {order.couponCode && <div><dt>優惠碼</dt><dd>{order.couponCode}</dd></div>}
-            <div><dt>宅配運費</dt><dd>{formatTwd(order.shippingTotal)}</dd></div>
+            <div><dt>配送運費</dt><dd>{formatTwd(order.shippingTotal)}</dd></div>
             <div className={styles.totalRow}><dt>訂單總額</dt><dd>{formatTwd(order.grandTotal)}</dd></div>
           </dl>
         </section>
@@ -148,29 +138,32 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
           <div className={styles.panelHeading}><h2>顧客與配送</h2><span>{stockModeLabel(order.stockMode)}</span></div>
           <dl className={styles.detailList}>
             <div><dt>收件人</dt><dd>{order.recipientName}</dd></div>
-            <div><dt>Email</dt><dd><a href={`mailto:${order.email}`}>{order.email}</a></dd></div>
+            <div><dt>電子郵件</dt><dd><a href={`mailto:${order.email}`}>{order.email}</a></dd></div>
             <div><dt>手機</dt><dd><a href={`tel:${order.phone}`}>{order.phone}</a></dd></div>
-            <div><dt>配送方式</dt><dd>{order.shippingMethod === "home_delivery" ? "宅配（台灣）" : order.shippingMethod}</dd></div>
-            <div><dt>地址</dt><dd>{order.postalCode} {order.city}{order.district}<br />{order.addressLine}</dd></div>
+            <div><dt>配送方式</dt><dd>{shippingMethodLabel(order.shippingMethod)}</dd></div>
+            {isConvenienceStoreMethod(order.shippingMethod as "cvs_711" | "cvs_family" | "home_delivery") && latestShipment ? <div><dt>取貨門市</dt><dd>{latestShipment.storeName ?? "—"}{latestShipment.storeCode ? `（${latestShipment.storeCode}）` : ""}<br />{latestShipment.storeAddress ?? "—"}</dd></div> : <div><dt>地址</dt><dd>{order.postalCode} {order.city}{order.district}<br />{order.addressLine}</dd></div>}
             {order.customerNote && <div><dt>顧客備註</dt><dd>{order.customerNote}</dd></div>}
           </dl>
         </section>
 
         <section className={styles.panel}>
-          <div className={styles.panelHeading}><h2>付款</h2><span>{paymentLabels[order.paymentStatus] ?? order.paymentStatus}</span></div>
-          {order.payments.length ? <div className={styles.compactList}>{order.payments.map((payment) => <div key={payment.id} className={styles.compactItem}><strong>{payment.provider}</strong><span>{payment.status} · {formatTwd(payment.amount)}</span>{payment.providerPaymentId && <small>交易序號：{payment.providerPaymentId}</small>}{payment.failureMessage && <small className={styles.warningText}>{payment.failureMessage}</small>}{payment.paidAt && <small>付款時間：{formatDate(payment.paidAt)}</small>}</div>)}</div> : <p className={styles.empty}>尚無付款紀錄。</p>}
+          <div className={styles.panelHeading}><h2>付款</h2><span>{paymentLabels[order.paymentStatus] ?? "狀態更新"}</span></div>
+          {order.payments.length ? <div className={styles.compactList}>{order.payments.map((payment) => <div key={payment.id} className={styles.compactItem}><strong>{paymentMethodLabels[payment.paymentMethod] ?? "其他付款方式"}</strong><span>{paymentLabels[payment.status] ?? "狀態更新"} · {formatTwd(payment.amount)}</span>{payment.refundedAmount > 0 && <small>已退款：{formatTwd(payment.refundedAmount)}</small>}{payment.providerPaymentId && <small>交易序號：{payment.providerPaymentId}</small>}{paymentInfoRows(payment).map(([label, value]) => <small key={label}>{label}：{value}</small>)}{payment.failureMessage && <small className={styles.warningText}>{payment.failureMessage}</small>}{payment.paidAt && <small>付款時間：{formatDate(payment.paidAt)}</small>}</div>)}</div> : <p className={styles.empty}>尚無付款紀錄。</p>}
         </section>
 
-        <section className={styles.panel}>
-          <div className={styles.panelHeading}><h2>出貨資訊</h2><span>{latestShipment?.status ?? "尚未建立"}</span></div>
-          {latestShipment ? <dl className={styles.detailList}><div><dt>物流商</dt><dd>{latestShipment.carrier}</dd></div><div><dt>追蹤碼</dt><dd>{latestShipment.trackingNumber}</dd></div>{latestShipment.shippedAt && <div><dt>出貨時間</dt><dd>{formatDate(latestShipment.shippedAt)}</dd></div>}{latestShipment.deliveredAt && <div><dt>送達時間</dt><dd>{formatDate(latestShipment.deliveredAt)}</dd></div>}</dl> : <p className={styles.empty}>尚未建立出貨資訊。</p>}
-        </section>
-
-        <section className={styles.panel}>
-          <h2>更新履約</h2>
-          <OrderActions order={actionOrder} />
-        </section>
       </aside>
+    </div>
+
+    <div className={styles.detailOperations}>
+      <section className={styles.panel}>
+        <div className={styles.panelHeading}><h2>出貨資訊</h2><span>{latestShipment ? (shipmentLabels[latestShipment.status] ?? "狀態更新") : "尚未建立"}</span></div>
+        {latestShipment ? <dl className={styles.detailList}><div><dt>配送方式</dt><dd>{shippingMethodLabel(latestShipment.shippingMethod)}</dd></div><div><dt>物流商</dt><dd>{latestShipment.carrier ?? "待安排"}</dd></div><div><dt>追蹤碼</dt><dd>{latestShipment.trackingNumber ?? "待填寫"}</dd></div>{isConvenienceStoreMethod(latestShipment.shippingMethod as "cvs_711" | "cvs_family" | "home_delivery") && <div><dt>取貨門市</dt><dd>{latestShipment.storeName ?? "—"}{latestShipment.storeCode ? `（${latestShipment.storeCode}）` : ""}<br />{latestShipment.storeAddress ?? "—"}</dd></div>}{latestShipment.shippedAt && <div><dt>出貨時間</dt><dd>{formatDate(latestShipment.shippedAt)}</dd></div>}{latestShipment.deliveredAt && <div><dt>送達時間</dt><dd>{formatDate(latestShipment.deliveredAt)}</dd></div>}</dl> : <p className={styles.empty}>尚未建立出貨資訊。</p>}
+      </section>
+
+      <section className={styles.panel}>
+        <h2>更新履約</h2>
+        <OrderActions order={actionOrder} />
+      </section>
     </div>
   </>;
 }

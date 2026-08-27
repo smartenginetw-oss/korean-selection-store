@@ -13,6 +13,7 @@
 .consent { display: flex; gap: 12px; align-items: flex-start; padding: 4px; color: var(--color-text-secondary); font-size: .95rem; line-height: 1.55; }
 .consent input { flex: 0 0 auto; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--color-primary); }
 .error { padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--color-error) 35%, var(--color-border)); border-radius: var(--radius-md); color: var(--color-error); background: color-mix(in srgb, var(--color-error) 8%, var(--color-surface)); }
+.availabilityNotice { padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--color-warning) 35%, var(--color-border)); border-radius: var(--radius-md); color: var(--color-warning); background: var(--color-warning-bg); }
 .couponRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; }
 .couponRow :global(.button) { margin-top: 0; white-space: nowrap; }
 .couponMessage { display: block; min-height: 1.2em; margin-top: 7px; color: var(--color-text-muted); font-size: .72rem; line-height: 1.5; }

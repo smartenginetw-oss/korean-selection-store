@@ -1,10 +1,10 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/types/database";
-import { products as mockProducts, type Product, type ProductCategory, type ProductOptionGroup, type ProductVariant } from "./data";
+import { type Product, type ProductCategory, type ProductOptionGroup, type ProductVariant } from "./data";
 
 type ProductRow = Pick<
   Tables<"products">,
-  "id" | "name" | "slug" | "description" | "original_price" | "sale_price" | "status" | "tags" | "published_at"
+  "id" | "name" | "slug" | "description" | "material" | "size_guide" | "model_info" | "origin" | "care_instructions" | "original_price" | "sale_price" | "status" | "tags" | "published_at"
 >;
 type OptionRow = Pick<Tables<"product_options">, "id" | "product_id" | "name" | "position">;
 type OptionValueRow = Pick<Tables<"product_option_values">, "id" | "option_id" | "value" | "position">;
@@ -14,6 +14,18 @@ type VariantRow = Pick<
 >;
 type VariantOptionRow = Pick<Tables<"variant_option_values">, "variant_id" | "option_value_id">;
 type ImageRow = Pick<Tables<"product_images">, "product_id" | "storage_path" | "sort_order" | "is_primary">;
+type ProductCategoryLinkRow = Pick<Tables<"product_categories">, "product_id" | "category_id" | "is_primary">;
+type CategoryRow = Pick<Tables<"categories">, "id" | "name" | "slug" | "is_active" | "sort_order">;
+type PublicVariantAvailabilityRow = { variant_id: string; is_available: boolean };
+type PublicBestSellerRow = { product_id: string; sold_quantity: number };
+
+export type PublicVariantStatus = {
+  variantId: string;
+  productId: string;
+  price: number;
+  availability: ProductVariant["availability"];
+  arrival?: string;
+};
 
 const PALETTES: Record<string, [string, string]> = {
   "soft-oversize-knit": ["#d8c5ae", "#9a8a79"],
@@ -30,8 +42,11 @@ const CATEGORY_BY_SLUG: Record<string, ProductCategory> = {
   "calm-pleated-trousers": "bottoms",
 };
 
-function mapCategory(row: ProductRow): ProductCategory {
-  const taggedCategory = row.tags.find((tag): tag is ProductCategory => ["tops", "bottoms", "outerwear", "accessories"].includes(tag));
+const legacyCategorySlugs = new Set(["tops", "bottoms", "outerwear", "accessories"]);
+
+function mapCategory(row: ProductRow, linkedCategory?: string): ProductCategory {
+  if (linkedCategory) return linkedCategory;
+  const taggedCategory = row.tags.find((tag) => legacyCategorySlugs.has(tag));
   return taggedCategory ?? CATEGORY_BY_SLUG[row.slug] ?? "tops";
 }
 
@@ -62,8 +77,9 @@ function isSizeOption(name: string) {
   return ["size", "尺寸", "尺碼"].includes(name.trim().toLowerCase());
 }
 
-function mapFulfillmentMode(mode: string): ProductVariant["availability"] {
-  if (mode === "preorder" || mode === "unavailable") return mode;
+function mapVariantAvailability(mode: string, isAvailable: boolean): ProductVariant["availability"] {
+  if (mode === "preorder") return "preorder";
+  if (mode === "unavailable" || !isAvailable) return "unavailable";
   return "in_stock";
 }
 
@@ -72,6 +88,8 @@ function mapProduct(
   optionsByProduct: Map<string, ProductOptionGroup[]>,
   variantsByProduct: Map<string, ProductVariant[]>,
   imagesByProduct: Map<string, string[]>,
+  categoryByProduct: Map<string, string>,
+  soldQuantityByProduct: Map<string, number>,
 ): Product {
   const optionGroups = optionsByProduct.get(row.id) ?? [];
   const variants = variantsByProduct.get(row.id) ?? [];
@@ -80,13 +98,18 @@ function mapProduct(
   const fallbackGroups = optionGroups.length ? optionGroups : [];
   const colors = colorGroup?.values ?? fallbackGroups[0]?.values ?? [];
   const sizes = sizeGroup?.values ?? fallbackGroups[1]?.values ?? [];
-  const availability = variants.some((variant) => variant.availability === "in_stock")
-    ? "in_stock"
-    : variants.some((variant) => variant.availability === "preorder")
-      ? "preorder"
-      : "in_stock";
+  const hasInStock = variants.some((variant) => variant.availability === "in_stock");
+  const hasPreorder = variants.some((variant) => variant.availability === "preorder");
+  const availability = hasInStock && hasPreorder
+    ? "mixed"
+    : hasInStock
+      ? "in_stock"
+      : hasPreorder
+        ? "preorder"
+        : "unavailable";
+  const isAvailable = variants.some((variant) => variant.availability !== "unavailable");
   const preorderVariant = variants.find((variant) => variant.availability === "preorder");
-  const badge = row.tags.includes("new") ? "NEW" : row.original_price ? "SALE" : undefined;
+  const badge = row.tags.includes("new") ? "NEW" : row.tags.includes("sale") || row.original_price ? "SALE" : undefined;
 
   return {
     id: row.id,
@@ -96,13 +119,20 @@ function mapProduct(
     originalPrice: row.original_price ?? undefined,
     badge,
     availability,
+    isAvailable,
+    soldQuantity: soldQuantityByProduct.get(row.id) ?? 0,
     arrival: preorderVariant?.arrival,
     images: imagesByProduct.get(row.id) ?? [],
     palette: PALETTES[row.slug] ?? ["#d8c5ae", "#9a8a79"],
     colors,
     sizes,
     description: row.description,
-    category: mapCategory(row),
+    material: row.material ?? undefined,
+    sizeGuide: row.size_guide ?? undefined,
+    modelInfo: row.model_info ?? undefined,
+    origin: row.origin ?? undefined,
+    careInstructions: row.care_instructions ?? undefined,
+    category: mapCategory(row, categoryByProduct.get(row.id)),
     optionGroups,
     variants,
   };
@@ -110,12 +140,12 @@ function mapProduct(
 
 export async function getCatalog(): Promise<Product[]> {
   const client = getPublicClient();
-  if (!client) return mockProducts;
+  if (!client) return [];
 
-  const [productsResult, optionsResult, valuesResult, variantsResult, linksResult, imagesResult] = await Promise.all([
+  const [productsResult, optionsResult, valuesResult, variantsResult, linksResult, imagesResult, categoryLinksResult, categoriesResult] = await Promise.all([
     client
       .from("products")
-      .select("id,name,slug,description,original_price,sale_price,status,tags,published_at")
+      .select("id,name,slug,description,material,size_guide,model_info,origin,care_instructions,original_price,sale_price,status,tags,published_at")
       .eq("status", "active")
       .order("published_at", { ascending: false }),
     client.from("product_options").select("id,product_id,name,position").order("position"),
@@ -130,12 +160,14 @@ export async function getCatalog(): Promise<Product[]> {
       .select("product_id,storage_path,sort_order,is_primary")
       .order("is_primary", { ascending: false })
       .order("sort_order", { ascending: true }),
+    client.from("product_categories").select("product_id,category_id,is_primary").eq("is_primary", true),
+    client.from("categories").select("id,name,slug,is_active,sort_order").eq("is_active", true).order("sort_order").order("name"),
   ]);
 
-  const error = productsResult.error ?? optionsResult.error ?? valuesResult.error ?? variantsResult.error ?? linksResult.error ?? imagesResult.error;
+  const error = productsResult.error ?? optionsResult.error ?? valuesResult.error ?? variantsResult.error ?? linksResult.error ?? imagesResult.error ?? categoryLinksResult.error ?? categoriesResult.error;
   if (error) {
-    console.error("[catalog] Supabase read failed; using local fallback.", error.message);
-    return mockProducts;
+    console.error("[catalog] Supabase read failed; returning an empty catalog.", error.message);
+    return [];
   }
 
   const productRows = (productsResult.data ?? []) as ProductRow[];
@@ -144,8 +176,31 @@ export async function getCatalog(): Promise<Product[]> {
   const options = optionsResult.data as OptionRow[];
   const values = valuesResult.data as OptionValueRow[];
   const variants = variantsResult.data as VariantRow[];
+  const availabilityResult = variants.length
+    ? await client.rpc("get_public_variant_availability", { p_variant_ids: variants.map((variant) => variant.id) })
+    : { data: [], error: null };
+  if (availabilityResult.error) {
+    console.error("[catalog] public availability read failed; returning an empty catalog.", availabilityResult.error.message);
+    return [];
+  }
+  const availabilityRows = (availabilityResult.data ?? []) as PublicVariantAvailabilityRow[];
+  const availabilityByVariant = new Map(availabilityRows.map((row) => [row.variant_id, row.is_available]));
+  const bestSellersResult = await client.rpc("get_public_best_sellers", { p_limit: 48 });
+  if (bestSellersResult.error) {
+    console.error("[catalog] public best-seller read failed; continuing without sales ranking.", bestSellersResult.error.message);
+  }
+  const bestSellerRows = (bestSellersResult.data ?? []) as PublicBestSellerRow[];
+  const soldQuantityByProduct = new Map(bestSellerRows.map((row) => [row.product_id, Number(row.sold_quantity) || 0]));
   const links = linksResult.data as VariantOptionRow[];
   const images = (imagesResult.data ?? []) as ImageRow[];
+  const categoryRows = (categoriesResult.data ?? []) as CategoryRow[];
+  const categoryLinks = (categoryLinksResult.data ?? []) as ProductCategoryLinkRow[];
+  const categorySlugById = new Map(categoryRows.map((category) => [category.id, category.slug]));
+  const categoryByProduct = new Map<string, string>();
+  for (const link of categoryLinks) {
+    const slug = categorySlugById.get(link.category_id);
+    if (slug) categoryByProduct.set(link.product_id, slug);
+  }
   const optionById = new Map(options.map((option) => [option.id, option]));
   const valueById = new Map(values.map((value) => [value.id, value]));
   const linksByVariant = new Map<string, string[]>();
@@ -182,7 +237,7 @@ export async function getCatalog(): Promise<Product[]> {
       id: variant.id,
       sku: variant.sku,
       price: variant.price_override ?? productRows.find((product) => product.id === variant.product_id)?.sale_price ?? 0,
-      availability: mapFulfillmentMode(variant.fulfillment_mode),
+      availability: mapVariantAvailability(variant.fulfillment_mode, availabilityByVariant.get(variant.id) === true),
       arrival: formatArrival(variant.preorder_available_at),
       options: selectedOptions,
     };
@@ -199,7 +254,77 @@ export async function getCatalog(): Promise<Product[]> {
     imagesByProduct.set(image.product_id, current);
   }
 
-  return productRows.map((row) => mapProduct(row, optionsByProduct, variantsByProduct, imagesByProduct));
+  return productRows.map((row) => mapProduct(row, optionsByProduct, variantsByProduct, imagesByProduct, categoryByProduct, soldQuantityByProduct));
+}
+
+export type PublicCategory = { slug: string; name: string };
+
+export async function getPublicCategories(): Promise<PublicCategory[]> {
+  const client = getPublicClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from("categories")
+    .select("slug,name")
+    .eq("is_active", true)
+    .order("sort_order")
+    .order("name");
+  if (error) {
+    console.error("[catalog] category read failed; returning no categories.", error.message);
+    return [];
+  }
+  return (data ?? []).map((category) => ({ slug: category.slug, name: category.name }));
+}
+
+/**
+ * Re-checks only the public, customer-safe state needed by a persisted cart.
+ * Inventory quantities stay behind the availability RPC and are never returned.
+ */
+export async function getPublicVariantStatuses(variantIds: string[]): Promise<PublicVariantStatus[] | null> {
+  const client = getPublicClient();
+  if (!client || !variantIds.length) return client ? [] : null;
+
+  const { data: variantData, error: variantError } = await client
+    .from("product_variants")
+    .select("id,product_id,price_override,fulfillment_mode,preorder_available_at")
+    .eq("status", "active")
+    .in("id", variantIds);
+  if (variantError) {
+    console.error("[catalog] public cart availability read failed; returning no statuses.", variantError.message);
+    return null;
+  }
+
+  const variants = (variantData ?? []) as Array<Pick<VariantRow, "id" | "product_id" | "price_override" | "fulfillment_mode" | "preorder_available_at">>;
+  if (!variants.length) return [];
+
+  const productIds = [...new Set(variants.map((variant) => variant.product_id))];
+  const { data: productData, error: productError } = await client
+    .from("products")
+    .select("id,sale_price,status")
+    .eq("status", "active")
+    .in("id", productIds);
+  if (productError) {
+    console.error("[catalog] public cart product read failed; returning no statuses.", productError.message);
+    return null;
+  }
+
+  const activeProducts = new Map((productData ?? []).map((product) => [product.id, product.sale_price]));
+  const activeVariants = variants.filter((variant) => activeProducts.has(variant.product_id));
+  if (!activeVariants.length) return [];
+
+  const availabilityResult = await client.rpc("get_public_variant_availability", { p_variant_ids: activeVariants.map((variant) => variant.id) });
+  if (availabilityResult.error) {
+    console.error("[catalog] public cart availability RPC failed; returning no statuses.", availabilityResult.error.message);
+    return null;
+  }
+  const availabilityByVariant = new Map(((availabilityResult.data ?? []) as PublicVariantAvailabilityRow[]).map((row) => [row.variant_id, row.is_available]));
+
+  return activeVariants.map((variant) => ({
+    variantId: variant.id,
+    productId: variant.product_id,
+    price: variant.price_override ?? activeProducts.get(variant.product_id) ?? 0,
+    availability: mapVariantAvailability(variant.fulfillment_mode, availabilityByVariant.get(variant.id) === true),
+    arrival: formatArrival(variant.preorder_available_at),
+  }));
 }
 
 export async function getProductBySlug(slug: string) {

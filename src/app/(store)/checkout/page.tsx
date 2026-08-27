@@ -9,6 +9,8 @@ export const dynamic = "force-dynamic";
 
 export default async function CheckoutPage() {
   const [settings, supabase] = await Promise.all([getStoreSettings(), createClient()]);
+  const testPaymentEnabled = process.env.NEXT_PUBLIC_TEST_PAYMENT_ENABLED === "true" || process.env.NODE_ENV !== "production";
+  const ecpayEnabled = process.env.NEXT_PUBLIC_ECPAY_ENABLED === "true";
   const { data: { user } } = await supabase.auth.getUser();
   let prefill;
   if (user) {
@@ -32,5 +34,5 @@ export default async function CheckoutPage() {
       } : undefined,
     };
   }
-  return <div className={`container ${styles.page}`}><Link className={styles.back} href="/cart">← 返回購物車</Link><div className="eyebrow">Secure checkout · Preview</div><h1 className="serif">結帳</h1><CheckoutForm settings={settings} prefill={prefill} /></div>;
+  return <div className={`container ${styles.page}`}><Link className={styles.back} href="/cart">← 返回購物車</Link><div className="eyebrow">Secure checkout · Preview</div><h1 className="serif">結帳</h1><CheckoutForm settings={settings} prefill={prefill} testPaymentEnabled={testPaymentEnabled} ecpayEnabled={ecpayEnabled} /></div>;
 }

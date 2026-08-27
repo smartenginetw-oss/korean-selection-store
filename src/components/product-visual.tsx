@@ -5,7 +5,7 @@ import styles from "./product-visual.module.css";
 export function ProductVisual({ palette, label, images = [], large = false }: { palette: [string, string]; label: string; images?: string[]; large?: boolean }) {
   if (images[0]) {
     return <div className={styles.visual + " " + (large ? styles.large : "")} role="img" aria-label={label + " 商品圖片"}>
-      <Image className={styles.image} src={images[0]} alt={label + " 商品圖片"} fill sizes={large ? "(min-width: 850px) 55vw, 100vw" : "(min-width: 850px) 30vw, 50vw"} unoptimized />
+      <Image className={styles.image} src={images[0]} alt={label + " 商品圖片"} fill sizes={large ? "(min-width: 850px) 55vw, 100vw" : "(min-width: 850px) 30vw, 50vw"} />
     </div>;
   }
 

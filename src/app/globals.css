@@ -39,6 +39,8 @@ img { max-width: 100%; display: block; }
 .badge-new { background: var(--color-surface-muted); }
 .badge-stock { color: var(--color-success); background: var(--color-success-bg); }
 .badge-preorder { color: var(--color-warning); background: var(--color-warning-bg); }
+.badge-mixed { color: var(--color-warning); background: var(--color-warning-bg); }
+.badge-sold { color: var(--color-text-secondary); background: var(--color-surface-muted); }
 .field { display: grid; gap: 7px; }
 .field label { font-size: .875rem; font-weight: 700; }
 .input { width: 100%; min-height: 48px; padding: 11px 14px; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }

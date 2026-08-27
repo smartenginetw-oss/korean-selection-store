@@ -18,7 +18,9 @@ export async function updateSession(request: NextRequest) {
   if (appMode === "admin" && pathname === "/login") {
     return redirectToAdminLogin(request);
   }
-  if (appMode === "admin" && pathname !== "/admin-login" && !pathname.startsWith("/admin")) {
+  const authRecoveryPath = pathname === "/forgot-password" || pathname === "/reset-password";
+  const authCallbackPath = pathname === "/auth/callback";
+  if (appMode === "admin" && pathname !== "/admin-login" && !pathname.startsWith("/admin") && !authRecoveryPath && !authCallbackPath) {
     return redirectToPath(request, "/admin");
   }
   if (appMode === "store" && (pathname === "/admin-login" || pathname.startsWith("/admin"))) {

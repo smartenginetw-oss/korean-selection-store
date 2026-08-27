@@ -1,6 +1,10 @@
 .grid { display: grid; gap: 16px; }
 .heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
 .heading h2 { margin: 5px 0 0; font-size: 1.05rem; }
+.headingActions { display: flex; align-items: center; gap: 10px; }
+.previewLink { color: var(--color-accent); font-size: .75rem; text-decoration: underline; text-underline-offset: 3px; }
+.ownerOnlyNotice { margin: 0 0 12px; padding: 9px 12px; border-radius: var(--radius-md); background: var(--color-warning-bg); color: var(--color-warning); font-size: .78rem; }
+.readOnlyLabel { color: var(--color-text-muted); font-size: .78rem; }
 .form { display: grid; gap: 14px; }
 .form label:not(.checkbox) { display: grid; gap: 7px; color: var(--color-text-secondary); font-size: .78rem; }
 .form textarea { min-height: 150px; resize: vertical; line-height: 1.65; }
@@ -9,5 +13,20 @@
 .checkbox input { width: 17px; height: 17px; accent-color: var(--color-primary); }
 .updated { color: var(--color-text-muted); font-size: .7rem; }
 .error { margin-bottom: 18px; padding: 12px 14px; border-radius: var(--radius-md); color: #8b4136; background: color-mix(in srgb, #8b4136 8%, var(--color-surface)); border: 1px solid color-mix(in srgb, #8b4136 30%, var(--color-border)); font-size: .82rem; }
+.homePanel { margin-top: 16px; }
+.sectionIntro { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.sectionIntro h2 { margin: 5px 0 5px; font-size: 1.05rem; }
+.sectionIntro p { margin: 0; color: var(--color-text-secondary); font-size: .78rem; }
+.ownerOnlyHint { margin-top: 7px !important; color: var(--color-warning) !important; }
+.collectionGrid { display: grid; gap: 14px; }
+.collectionCard { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-muted); }
+.collectionCardReadOnly { opacity: .88; }
+.collectionCardReadOnly .input:disabled { color: var(--color-text-secondary); background: var(--color-surface); cursor: not-allowed; }
+.collectionCard label { display: grid; gap: 6px; color: var(--color-text-secondary); font-size: .75rem; }
+.collectionCardHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.collectionCardHead strong { font-size: .82rem; letter-spacing: .08em; }
+.twoCol { display: grid; gap: 12px; }
+.order { display: inline-flex; align-items: center; gap: 8px; color: var(--color-text-secondary); font-size: .75rem; }
+.order .input { width: 74px; }
 @media (min-width: 860px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-
+@media (min-width: 860px) { .collectionGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .twoCol { grid-template-columns: minmax(0, 1fr) 120px; } }

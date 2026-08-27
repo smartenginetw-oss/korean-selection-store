@@ -12,6 +12,11 @@
 .summaryRow:last-child { border-bottom: 0; }
 .summaryRow span { color: var(--color-text-secondary); }
 .summaryRow strong { text-align: right; font-weight: 500; }
+.paymentInfo { display: grid; gap: 8px; margin-top: 18px; padding: 14px 16px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--color-accent) 10%, transparent); font-size: .82rem; }
+.paymentInfo > strong { font-size: .85rem; }
+.paymentInfo > div { display: flex; justify-content: space-between; gap: 16px; }
+.paymentInfo span { color: var(--color-text-secondary); }
+.paymentInfo b { font-weight: 600; text-align: right; overflow-wrap: anywhere; }
 .items { display: grid; gap: 0; }
 .item { display: grid; grid-template-columns: 1fr auto; gap: 16px; padding-block: 14px; border-bottom: 1px solid var(--color-border); }
 .item:last-child { border-bottom: 0; }

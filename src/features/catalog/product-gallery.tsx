@@ -30,7 +30,7 @@ export function ProductGallery({
         aria-pressed={index === activeIndex}
         onClick={() => setActiveIndex(index)}
       >
-        <Image src={image} alt={`${label} 商品圖片 ${index + 1}`} fill sizes="96px" unoptimized />
+        <Image src={image} alt={`${label} 商品圖片 ${index + 1}`} fill sizes="96px" />
       </button>)}
     </div>}
   </div>;
