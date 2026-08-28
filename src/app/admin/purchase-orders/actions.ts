@@ -158,7 +158,7 @@ export async function createPurchaseOrderAction(formData: FormData) {
     if (!quotation) redirectToOrders("error", "所選報價單不存在。");
     quotationSupplierId = quotation.supplier_id;
     if (quotation.supplier_id !== data.supplierId) redirectToOrders("error", "報價單與供應商不一致。");
-    if (quotation.status === "rejected" || quotation.status === "converted") redirectToOrders("error", "已拒絕或已轉換的報價單不能再建立採購單。");
+    if (quotation.status !== "approved") redirectToOrders("error", "只有已核准的報價單可以轉成採購單，請先更新報價單狀態。");
   }
 
   const { data: purchaseOrder, error: purchaseOrderError } = await supabase.from("purchase_orders").insert({

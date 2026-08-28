@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireProcurement } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import { RoundedDatePicker } from "@/components/rounded-date-picker";
@@ -66,7 +67,7 @@ export default async function AdminQuotationsPage({ searchParams }: { searchPara
     <div className={styles.layout}>
       <section className={adminStyles.panel}>
         <h2>建立報價單</h2>
-        <p className={adminStyles.panelIntro}>先記錄廠商報價與一筆商品明細；後續可沿用報價單轉採購單，避免重新輸入成本。</p>
+        <p className={adminStyles.panelIntro}>先記錄廠商報價與商品明細；核准後可直接帶入採購單，避免重新輸入成本。</p>
         {!suppliers.length && <p className={styles.hint}>請先到「供應商」建立至少一家啟用中的供應商。</p>}
         <form action={createQuotationAction} className={styles.form}>
           <div className={styles.twoColumns}>
@@ -93,7 +94,7 @@ export default async function AdminQuotationsPage({ searchParams }: { searchPara
       <section className={adminStyles.panel}>
         <h2>狀態流程</h2>
         <ol className={styles.steps}><li><strong>草稿</strong><span>先記錄收到的價格與數量。</span></li><li><strong>已收到／已核准</strong><span>確認條件後，準備轉成採購單。</span></li><li><strong>已轉採購單</strong><span>此狀態保留報價歷史，不再刪除。</span></li></ol>
-        <p className={styles.hint}>V1.5 目前先建立報價基礎；採購單轉換與到貨驗收會在下一個切片接入。</p>
+        <p className={styles.hint}>核准報價後可按「轉成採購單」帶入供應商、幣別、匯率與明細；建立後報價會保留為已轉採購單。</p>
       </section>
     </div>
     <section className={adminStyles.panel}>
@@ -101,7 +102,7 @@ export default async function AdminQuotationsPage({ searchParams }: { searchPara
       {quotations.length ? <div className={styles.list}>{quotations.map((quotation) => { const quotationItems = itemsByQuotation.get(quotation.id) ?? []; const total = quotationItems.reduce((sum, item) => sum + Number(item.total_cost || 0), 0); return <article className={styles.item} key={quotation.id}>
         <div className={styles.itemHeading}><div><strong>{quotation.quote_number}</strong><small>{supplierNameById.get(quotation.supplier_id) ?? "未知供應商"} · {formatDate(quotation.quote_date)}</small></div><span className={`badge ${quotation.status === "approved" ? "badge-stock" : quotation.status === "rejected" ? "badge-preorder" : "badge-stock"}`}>{statusLabels[quotation.status] ?? quotation.status}</span></div>
         <div className={styles.itemBody}>{quotationItems.map((item) => <div className={styles.line} key={item.id}><span>{item.product_name}{item.variant_name ? ` · ${item.variant_name}` : ""}<small>{item.sku ?? "暫存商品"} · 數量 {item.quantity} · MOQ {item.moq}</small></span><strong>{formatMoney(Number(item.total_cost), item.currency)}</strong></div>)}{!quotationItems.length && <p className={styles.hint}>尚無報價明細。</p>}</div>
-        <div className={styles.itemFooter}><span>合計 {formatMoney(total, quotation.currency)} · 匯率 {quotation.exchange_rate}</span><form action={updateQuotationStatusAction} className={styles.statusForm}><input type="hidden" name="id" value={quotation.id} /><label className="srOnly" htmlFor={`status-${quotation.id}`}>更新報價單狀態</label><div className={styles.statusSelect}><RoundedSelect id={`status-${quotation.id}`} name="status" options={statusOptions} defaultValue={quotation.status} ariaLabel="更新報價單狀態" /></div><button className="button button-secondary button-small" type="submit">更新狀態</button></form></div>
+        <div className={styles.itemFooter}><span>合計 {formatMoney(total, quotation.currency)} · 匯率 {quotation.exchange_rate}</span><div className={styles.footerActions}>{quotation.status === "approved" && <Link className="button button-secondary button-small" href={`/admin/purchase-orders?quotationId=${quotation.id}`}>轉成採購單</Link>}<form action={updateQuotationStatusAction} className={styles.statusForm}><input type="hidden" name="id" value={quotation.id} /><label className="srOnly" htmlFor={`status-${quotation.id}`}>更新報價單狀態</label><div className={styles.statusSelect}><RoundedSelect id={`status-${quotation.id}`} name="status" options={statusOptions} defaultValue={quotation.status} ariaLabel="更新報價單狀態" /></div><button className="button button-secondary button-small" type="submit">更新狀態</button></form></div></div>
       </article>; })}</div> : <p className={adminStyles.empty}>目前尚無報價紀錄。</p>}
     </section>
   </>;

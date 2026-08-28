@@ -20,6 +20,8 @@ type LineItem = {
   quantity: string;
 };
 
+export type PurchaseOrderLineSeed = Omit<LineItem, "key">;
+
 function createLineItem(sequence: number): LineItem {
   return {
     key: `purchase-line-${sequence}`,
@@ -32,9 +34,11 @@ function createLineItem(sequence: number): LineItem {
   };
 }
 
-export function PurchaseOrderLineItems({ products, variants }: { products: Product[]; variants: Variant[] }) {
+export function PurchaseOrderLineItems({ products, variants, initialLines = [] }: { products: Product[]; variants: Variant[]; initialLines?: PurchaseOrderLineSeed[] }) {
   const sequence = useRef(1);
-  const [lines, setLines] = useState<LineItem[]>([createLineItem(0)]);
+  const [lines, setLines] = useState<LineItem[]>(() => initialLines.length
+    ? initialLines.slice(0, MAX_LINES).map((line, index) => ({ ...line, key: `purchase-line-${index}` }))
+    : [createLineItem(0)]);
 
   function updateLine(key: string, patch: Partial<LineItem>) {
     setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)));

@@ -6,6 +6,7 @@ import { RoundedSelect } from "@/components/rounded-select";
 import adminStyles from "../admin.module.css";
 import { createPurchaseOrderAction, updatePurchaseOrderStatusAction } from "./actions";
 import { PurchaseOrderLineItems } from "./purchase-order-line-items";
+import type { PurchaseOrderLineSeed } from "./purchase-order-line-items";
 import styles from "./purchase-orders.module.css";
 
 export const dynamic = "force-dynamic";
@@ -34,15 +35,16 @@ function formatMoney(value: number, currency: string) {
   return `${currency} ${new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 2 }).format(Number(value) || 0)}`;
 }
 
-export default async function AdminPurchaseOrdersPage({ searchParams }: { searchParams: Promise<{ status?: string; message?: string }> }) {
+export default async function AdminPurchaseOrdersPage({ searchParams }: { searchParams: Promise<{ status?: string; message?: string; quotationId?: string }> }) {
   await requireProcurement();
   const params = await searchParams;
   const supabase = await createClient();
-  const [suppliersResult, productsResult, variantsResult, quotationsResult, ordersResult, itemsResult] = await Promise.all([
+  const [suppliersResult, productsResult, variantsResult, quotationsResult, quotationItemsResult, ordersResult, itemsResult] = await Promise.all([
     supabase.from("suppliers").select("id,name,country,is_active").order("is_active", { ascending: false }).order("name"),
     supabase.from("products").select("id,name").eq("status", "active").order("name"),
     supabase.from("product_variants").select("id,product_id,sku").eq("status", "active").order("sku"),
-    supabase.from("supplier_quotations").select("id,supplier_id,quote_number,status,currency").in("status", ["draft", "received", "approved"]).order("quote_number"),
+    supabase.from("supplier_quotations").select("id,supplier_id,quote_number,status,currency,exchange_rate").eq("status", "approved").order("quote_number"),
+    supabase.from("supplier_quotation_items").select("id,quotation_id,product_id,variant_id,product_name,variant_name,sku,unit_cost,quantity,currency").order("created_at"),
     supabase.from("purchase_orders").select("id,po_number,supplier_id,quotation_id,currency,exchange_rate,ordered_date,expected_date,status,subtotal,shipping_cost,other_cost,total_cost,note,created_at").order("ordered_date", { ascending: false }).order("created_at", { ascending: false }),
     supabase.from("purchase_order_items").select("id,purchase_order_id,product_name,variant_name,sku,unit_cost,quantity,currency,total_cost").order("created_at"),
   ]);
@@ -51,18 +53,38 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
   const products = productsResult.data ?? [];
   const variants = variantsResult.data ?? [];
   const quotations = quotationsResult.data ?? [];
+  const quotationItems = quotationItemsResult.data ?? [];
   const orders = ordersResult.data ?? [];
   const items = itemsResult.data ?? [];
   const supplierNameById = new Map(suppliers.map((supplier) => [supplier.id, supplier.name]));
-  const hasReadError = suppliersResult.error || productsResult.error || variantsResult.error || quotationsResult.error || ordersResult.error || itemsResult.error;
+  const hasReadError = suppliersResult.error || productsResult.error || variantsResult.error || quotationsResult.error || quotationItemsResult.error || ordersResult.error || itemsResult.error;
   const itemsByOrder = new Map<string, typeof items>();
   for (const item of items) itemsByOrder.set(item.purchase_order_id, [...(itemsByOrder.get(item.purchase_order_id) ?? []), item]);
   const quotationLabelById = new Map(quotations.map((quotation) => [quotation.id, `${quotation.quote_number} · ${supplierNameById.get(quotation.supplier_id) ?? "供應商"}`]));
+  const selectedQuotation = params.quotationId ? quotations.find((quotation) => quotation.id === params.quotationId) : undefined;
+  const activeProductIds = new Set(products.map((product) => product.id));
+  const activeVariantIds = new Set(variants.map((variant) => variant.id));
+  const selectedQuotationLines: PurchaseOrderLineSeed[] = selectedQuotation
+    ? quotationItems.filter((item) => item.quotation_id === selectedQuotation.id).slice(0, 20).map((item) => {
+      const productIsActive = Boolean(item.product_id && activeProductIds.has(item.product_id));
+      const variantIsActive = productIsActive && Boolean(item.variant_id && activeVariantIds.has(item.variant_id));
+      return {
+        productId: productIsActive ? item.product_id ?? "" : "",
+        variantId: variantIsActive ? item.variant_id ?? "" : "",
+        tempProductName: productIsActive ? "" : item.product_name,
+        variantName: item.variant_name ?? "",
+        unitCost: String(item.unit_cost),
+        quantity: String(item.quantity),
+      };
+    })
+    : [];
 
   return <>
     <div className={adminStyles.titleRow}><div><div className="eyebrow">採購・營運工具</div><h1 className="serif">採購單</h1></div><span className="badge badge-stock">V1.5 採購</span></div>
     {params.status === "created" && <div className={adminStyles.notice}>採購單已建立；若有帶入報價單，該報價單已標記為已轉採購單。</div>}
     {params.status === "updated" && <div className={adminStyles.notice}>採購單狀態已更新。</div>}
+    {selectedQuotation && <div className={adminStyles.notice}>已帶入核准報價「{selectedQuotation.quote_number}」；請確認採購單號、到貨日期與費用後建立。</div>}
+    {params.quotationId && !selectedQuotation && <div className={styles.error}>找不到可轉換的核准報價，請回到廠商報價重新選擇。</div>}
     {params.status === "error" && <div className={styles.error}>{params.message ?? "操作尚未完成，請稍後再試。"}</div>}
     {hasReadError && <div className={styles.error}>部分採購資料目前無法讀取，請重新整理後再試。</div>}
     <div className={styles.layout}>
@@ -72,16 +94,16 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
         {!suppliers.filter((supplier) => supplier.is_active).length && <p className={styles.hint}>請先到「供應商」建立至少一家啟用中的供應商。</p>}
         <form action={createPurchaseOrderAction} className={styles.form}>
           <div className={styles.twoColumns}>
-            <label>供應商<RoundedSelect name="supplierId" defaultValue="" options={[{ value: "", label: "選擇供應商" }, ...suppliers.filter((supplier) => supplier.is_active).map((supplier) => ({ value: supplier.id, label: `${supplier.name} · ${supplier.country}` }))]} /></label>
-            <label>採購單號<input className="input" name="poNumber" required maxLength={80} placeholder="例如：PO-2026-0827-01" /></label>
+            <label>供應商<RoundedSelect name="supplierId" defaultValue={selectedQuotation?.supplier_id ?? ""} options={[{ value: "", label: "選擇供應商" }, ...suppliers.filter((supplier) => supplier.is_active).map((supplier) => ({ value: supplier.id, label: `${supplier.name} · ${supplier.country}` }))]} /></label>
+            <label>採購單號<input className="input" name="poNumber" required maxLength={80} defaultValue={selectedQuotation ? `PO-${selectedQuotation.quote_number}` : ""} placeholder="例如：PO-2026-0827-01" /></label>
             <label>下單日期<RoundedDatePicker name="orderedDate" label="下單日期" initialValue={todayInput()} required /></label>
             <label>預計到貨日<RoundedDatePicker name="expectedDate" label="預計到貨日" /></label>
-            <label>幣別<RoundedSelect name="currency" defaultValue="KRW" options={currencyOptions} /></label>
-            <label>匯率（對 TWD）<input className="input" name="exchangeRate" type="number" min="0.000001" step="0.000001" defaultValue="1" required /></label>
-            <label>帶入報價單（選填）<RoundedSelect name="quotationId" defaultValue="" options={[{ value: "", label: "不帶入報價單" }, ...quotations.map((quotation) => ({ value: quotation.id, label: `${quotationLabelById.get(quotation.id)} · ${statusLabels[quotation.status] ?? quotation.status}` }))]} /></label>
+            <label>幣別<RoundedSelect name="currency" defaultValue={selectedQuotation?.currency ?? "KRW"} options={currencyOptions} /></label>
+            <label>匯率（對 TWD）<input className="input" name="exchangeRate" type="number" min="0.000001" step="0.000001" defaultValue={String(selectedQuotation?.exchange_rate ?? 1)} required /></label>
+            <label>帶入報價單（選填）<RoundedSelect name="quotationId" defaultValue={selectedQuotation?.id ?? ""} options={[{ value: "", label: "不帶入報價單" }, ...quotations.map((quotation) => ({ value: quotation.id, label: `${quotationLabelById.get(quotation.id)} · ${statusLabels[quotation.status] ?? quotation.status}` }))]} /></label>
             <label>建立後狀態<RoundedSelect name="status" defaultValue="draft" options={statusOptions.filter((option) => option.value === "draft" || option.value === "ordered")} /></label>
           </div>
-          <PurchaseOrderLineItems products={products} variants={variants} />
+          <PurchaseOrderLineItems products={products} variants={variants} initialLines={selectedQuotationLines} />
           <div className={styles.twoColumns}>
             <label>運費<input className="input" name="shippingCost" type="number" min="0" step="0.01" defaultValue="0" required /></label>
             <label>其他費用<input className="input" name="otherCost" type="number" min="0" step="0.01" defaultValue="0" required /></label>

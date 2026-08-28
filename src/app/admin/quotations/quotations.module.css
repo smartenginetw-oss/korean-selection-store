@@ -17,6 +17,7 @@
 .line { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: .82rem; }
 .line strong { color: var(--color-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .itemFooter { display: flex; align-items: center; justify-content: space-between; gap: 14px; color: var(--color-text-muted); font-size: .76rem; }
+.footerActions { display: flex; align-items: center; gap: 8px; }
 .statusForm { display: flex; align-items: center; gap: 8px; }
 .statusSelect { min-width: 150px; }
 .error { margin-bottom: 18px; padding: 12px 14px; border-radius: var(--radius-md); background: #f5e5e0; color: #8b4136; font-size: .82rem; }
