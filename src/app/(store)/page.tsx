@@ -23,7 +23,7 @@ export default async function HomePage() {
       </div>
     </section>
 
-    <section className="section"><div className="container"><div className="section-head"><div><div className="eyebrow">Just arrived</div><h2 className="section-title serif">本週新選</h2></div><Link href="/products">查看全部 →</Link></div><div className={styles.productGrid}>{products.map((product) => <ProductCard key={product.id} product={product} />)}</div></div></section>
+    <section className="section"><div className="container"><div className="section-head"><div><div className="eyebrow">Just arrived</div><h2 className="section-title serif">本週新選</h2></div><Link href="/products">查看全部 →</Link></div>{products.length > 0 ? <div className={styles.productGrid}>{products.map((product) => <ProductCard key={product.id} product={product} />)}</div> : <div className={styles.emptyCatalog} role="status"><strong>商品正在準備中</strong><p>我們正在整理下一批韓國男裝，請稍後再回來看看。</p><Link className="button button-secondary" href="/products">前往商品列表</Link></div>}</div></section>
 
     {popularProducts.length > 0 && <section className={styles.hotSection}><div className="container"><div className="section-head"><div><div className="eyebrow">Most loved</div><h2 className="section-title serif">近期熱賣</h2></div><Link href="/products?sort=popular">查看熱賣 →</Link></div><div className={styles.productGrid}>{popularProducts.map((product) => <ProductCard key={product.id} product={product} />)}</div></div></section>}
 

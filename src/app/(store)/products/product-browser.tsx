@@ -56,6 +56,7 @@ export function ProductBrowser({ products, categories = [], initialQuery = "", i
   }, [availability, category, price, products, query, sort]);
 
   const hasFilters = Boolean(query.trim()) || availability !== "all" || category !== "all" || price !== "all";
+  const catalogIsEmpty = products.length === 0;
   const pageSize = 12;
   const pagedProducts = visibleProducts.slice(0, page * pageSize);
   const categoryFilters = [{ slug: "all", name: "全部男裝" }, ...categories];
@@ -114,6 +115,20 @@ export function ProductBrowser({ products, categories = [], initialQuery = "", i
     </div>
     {visibleProducts.length > 0
       ? <><div className={styles.grid}>{pagedProducts.map((product) => <ProductCard key={product.id} product={product} />)}</div>{pagedProducts.length < visibleProducts.length && <div className={styles.loadMore}><button className="button button-secondary" type="button" onClick={() => setPage((current) => current + 1)}>載入更多</button><span>已顯示 {pagedProducts.length}／{visibleProducts.length} 件</span></div>}</>
-      : <div className={styles.empty}><strong>找不到符合條件的選品</strong><p>換個關鍵字或清除篩選，再試一次。</p><button className="button button-secondary" type="button" onClick={() => { setQuery(""); setAvailability("all"); setCategory("all"); setPrice("all"); setPage(1); }}>清除條件</button></div>}
+      : <div className={styles.empty} role="status">
+        <strong>{catalogIsEmpty ? "目前尚無可售商品" : "找不到符合條件的選品"}</strong>
+        <p>{catalogIsEmpty ? "商品正在準備中，請稍後再回來看看。" : "換個關鍵字或清除篩選，再試一次。"}</p>
+        <button className="button button-secondary" type="button" onClick={() => {
+          if (catalogIsEmpty) {
+            window.location.reload();
+            return;
+          }
+          setQuery("");
+          setAvailability("all");
+          setCategory("all");
+          setPrice("all");
+          setPage(1);
+        }}>{catalogIsEmpty ? "重新整理" : "清除條件"}</button>
+      </div>}
   </>;
 }
