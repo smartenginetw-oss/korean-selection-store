@@ -1585,6 +1585,7 @@ export type Database = {
           product_name: string
           purchase_order_item_id: string
           quantity_received: number
+          damaged_quantity: number
           receipt_id: string
           sku: string | null
           variant_id: string
@@ -1595,6 +1596,7 @@ export type Database = {
           product_name: string
           purchase_order_item_id: string
           quantity_received: number
+          damaged_quantity?: number
           receipt_id: string
           sku?: string | null
           variant_id: string
@@ -1605,6 +1607,7 @@ export type Database = {
           product_name?: string
           purchase_order_item_id?: string
           quantity_received?: number
+          damaged_quantity?: number
           receipt_id?: string
           sku?: string | null
           variant_id?: string

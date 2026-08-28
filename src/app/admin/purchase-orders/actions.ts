@@ -235,15 +235,19 @@ export async function recordPurchaseReceiptAction(formData: FormData) {
     redirectToOrders("error", "請確認到貨單號、到貨日期與備註格式。");
   }
 
-  const items: Array<{ purchaseOrderItemId: string; quantity: number }> = [];
+  const items: Array<{ purchaseOrderItemId: string; quantity: number; damagedQuantity: number }> = [];
   for (const [key, value] of formData.entries()) {
     if (!key.startsWith("quantity_")) continue;
     const itemId = z.string().uuid().safeParse(key.slice("quantity_".length));
     const quantity = z.coerce.number().int().min(0).max(1000000).safeParse(value);
-    if (!itemId.success || !quantity.success) redirectToOrders("error", "到貨數量格式不正確。");
-    if (quantity.data > 0) items.push({ purchaseOrderItemId: itemId.data, quantity: quantity.data });
+    const damagedQuantity = z.coerce.number().int().min(0).max(1000000).safeParse(formData.get(`damaged_${key.slice("quantity_".length)}`) ?? 0);
+    if (!itemId.success || !quantity.success || !damagedQuantity.success) redirectToOrders("error", "到貨良品／損耗數量格式不正確。");
+    if (quantity.data + damagedQuantity.data > 1000000) redirectToOrders("error", "單一明細的良品與損耗合計不可超過 1,000,000。");
+    if (quantity.data + damagedQuantity.data > 0) {
+      items.push({ purchaseOrderItemId: itemId.data, quantity: quantity.data, damagedQuantity: damagedQuantity.data });
+    }
   }
-  if (!items.length) redirectToOrders("error", "請至少輸入一筆到貨數量。");
+  if (!items.length) redirectToOrders("error", "請至少輸入一筆良品到貨或損耗數量。");
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("receive_purchase_order", {
