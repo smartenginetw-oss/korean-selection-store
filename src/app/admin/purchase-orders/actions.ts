@@ -216,9 +216,14 @@ export async function updatePurchaseOrderStatusAction(formData: FormData) {
   if (!id.success || !status.success) redirectToOrders("error", "採購單狀態資料不正確。");
 
   const supabase = await createClient();
-  const { error } = await supabase.from("purchase_orders").update({ status: status.data }).eq("id", id.data);
+  const { error } = await supabase.rpc("update_purchase_order_status", {
+    p_purchase_order_id: id.data,
+    p_status: status.data,
+  });
   if (error) {
     console.error("[admin/purchase-orders] status update failed", error.message);
+    if (error.code === "22023") redirectToOrders("error", "採購單狀態不能這樣變更；請依序完成下單與到貨驗收。");
+    if (error.code === "P0002") redirectToOrders("error", "找不到這張採購單，請重新整理後再試。");
     redirectToOrders("error", "採購單狀態尚未更新。");
   }
   revalidatePath("/admin/purchase-orders");

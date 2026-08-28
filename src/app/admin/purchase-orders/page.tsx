@@ -28,6 +28,15 @@ const quotationStatusLabels: Record<string, string> = {
 const currencyOptions = ["KRW", "TWD", "USD", "CNY"].map((currency) => ({ value: currency, label: currency }));
 const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({ value, label }));
 
+function statusOptionsFor(status: string) {
+  const allowed = status === "draft"
+    ? ["draft", "ordered", "cancelled"]
+    : status === "ordered"
+      ? ["ordered", "cancelled"]
+      : [status];
+  return statusOptions.filter((option) => allowed.includes(option.value));
+}
+
 function todayInput() {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
@@ -132,7 +141,7 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
         <div className={styles.itemHeading}><div><strong>{order.po_number}</strong><small>{supplierNameById.get(order.supplier_id) ?? "未知供應商"} · 下單 {formatDate(order.ordered_date)}{order.expected_date ? ` · 預計 ${formatDate(order.expected_date)}` : ""}</small></div><span className="badge badge-stock">{statusLabels[order.status] ?? order.status}</span></div>
         <div className={styles.itemBody}>{orderItems.map((item) => <div className={styles.line} key={item.id}><span>{item.product_name}{item.variant_name ? ` · ${item.variant_name}` : ""}<small>{item.sku ?? "暫存商品"} · 數量 {item.quantity} · 單件 {formatMoney(Number(item.unit_cost), item.currency)}</small></span><strong>{formatMoney(Number(item.total_cost), item.currency)}</strong></div>)}{!orderItems.length && <p className={styles.hint}>尚無採購明細。</p>}</div>
         <div className={styles.costs}><span>商品成本 <strong>{formatMoney(Number(order.subtotal), order.currency)}</strong></span><span>運費 <strong>{formatMoney(Number(order.shipping_cost), order.currency)}</strong></span><span>其他 <strong>{formatMoney(Number(order.other_cost), order.currency)}</strong></span><span>合計 <strong>{formatMoney(Number(order.total_cost), order.currency)}</strong></span></div>
-        <div className={styles.itemFooter}><span>{order.quotation_id ? `來源報價：${quotationLabelById.get(order.quotation_id) ?? "已封存報價"}` : "未連結報價單"} · 匯率 {order.exchange_rate}</span><div className={styles.actions}>{order.status !== "cancelled" && order.status !== "received" && <Link className="button button-secondary button-small" href={`/admin/purchase-orders/${order.id}/receive`}>登記到貨</Link>}<form action={updatePurchaseOrderStatusAction} className={styles.statusForm}><input type="hidden" name="id" value={order.id} /><label className="srOnly" htmlFor={`po-status-${order.id}`}>更新採購單狀態</label><div className={styles.statusSelect}><RoundedSelect id={`po-status-${order.id}`} name="status" defaultValue={order.status} options={statusOptions} ariaLabel="更新採購單狀態" /></div><button className="button button-secondary button-small" type="submit">更新狀態</button></form></div></div>
+        <div className={styles.itemFooter}><span>{order.quotation_id ? `來源報價：${quotationLabelById.get(order.quotation_id) ?? "已封存報價"}` : "未連結報價單"} · 匯率 {order.exchange_rate}</span><div className={styles.actions}>{order.status !== "cancelled" && order.status !== "received" && <Link className="button button-secondary button-small" href={`/admin/purchase-orders/${order.id}/receive`}>登記到貨</Link>}{statusOptionsFor(order.status).length > 1 && <form action={updatePurchaseOrderStatusAction} className={styles.statusForm}><input type="hidden" name="id" value={order.id} /><label className="srOnly" htmlFor={`po-status-${order.id}`}>更新採購單狀態</label><div className={styles.statusSelect}><RoundedSelect id={`po-status-${order.id}`} name="status" defaultValue={order.status} options={statusOptionsFor(order.status)} ariaLabel="更新採購單狀態" /></div><button className="button button-secondary button-small" type="submit">更新狀態</button></form>}</div></div>
       </article>; })}</div> : <p className={adminStyles.empty}>目前尚無採購紀錄。</p>}
     </section>
   </>;
