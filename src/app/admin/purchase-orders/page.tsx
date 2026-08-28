@@ -18,6 +18,13 @@ const statusLabels: Record<string, string> = {
   received: "已收貨",
   cancelled: "已取消",
 };
+const quotationStatusLabels: Record<string, string> = {
+  draft: "草稿",
+  received: "已收到",
+  approved: "已核准",
+  rejected: "已拒絕",
+  converted: "已轉採購單",
+};
 const currencyOptions = ["KRW", "TWD", "USD", "CNY"].map((currency) => ({ value: currency, label: currency }));
 const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({ value, label }));
 
@@ -43,7 +50,7 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
     supabase.from("suppliers").select("id,name,country,is_active").order("is_active", { ascending: false }).order("name"),
     supabase.from("products").select("id,name").eq("status", "active").order("name"),
     supabase.from("product_variants").select("id,product_id,sku").eq("status", "active").order("sku"),
-    supabase.from("supplier_quotations").select("id,supplier_id,quote_number,status,currency,exchange_rate").eq("status", "approved").order("quote_number"),
+    supabase.from("supplier_quotations").select("id,supplier_id,quote_number,status,currency,exchange_rate").order("quote_number"),
     supabase.from("supplier_quotation_items").select("id,quotation_id,product_id,variant_id,product_name,variant_name,sku,unit_cost,quantity,currency").order("created_at"),
     supabase.from("purchase_orders").select("id,po_number,supplier_id,quotation_id,currency,exchange_rate,ordered_date,expected_date,status,subtotal,shipping_cost,other_cost,total_cost,note,created_at").order("ordered_date", { ascending: false }).order("created_at", { ascending: false }),
     supabase.from("purchase_order_items").select("id,purchase_order_id,product_name,variant_name,sku,unit_cost,quantity,currency,total_cost").order("created_at"),
@@ -61,7 +68,8 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
   const itemsByOrder = new Map<string, typeof items>();
   for (const item of items) itemsByOrder.set(item.purchase_order_id, [...(itemsByOrder.get(item.purchase_order_id) ?? []), item]);
   const quotationLabelById = new Map(quotations.map((quotation) => [quotation.id, `${quotation.quote_number} · ${supplierNameById.get(quotation.supplier_id) ?? "供應商"}`]));
-  const selectedQuotation = params.quotationId ? quotations.find((quotation) => quotation.id === params.quotationId) : undefined;
+  const approvedQuotations = quotations.filter((quotation) => quotation.status === "approved");
+  const selectedQuotation = params.quotationId ? approvedQuotations.find((quotation) => quotation.id === params.quotationId) : undefined;
   const activeProductIds = new Set(products.map((product) => product.id));
   const activeVariantIds = new Set(variants.map((variant) => variant.id));
   const selectedQuotationLines: PurchaseOrderLineSeed[] = selectedQuotation
@@ -100,7 +108,7 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
             <label>預計到貨日<RoundedDatePicker name="expectedDate" label="預計到貨日" /></label>
             <label>幣別<RoundedSelect name="currency" defaultValue={selectedQuotation?.currency ?? "KRW"} options={currencyOptions} /></label>
             <label>匯率（對 TWD）<input className="input" name="exchangeRate" type="number" min="0.000001" step="0.000001" defaultValue={String(selectedQuotation?.exchange_rate ?? 1)} required /></label>
-            <label>帶入報價單（選填）<RoundedSelect name="quotationId" defaultValue={selectedQuotation?.id ?? ""} options={[{ value: "", label: "不帶入報價單" }, ...quotations.map((quotation) => ({ value: quotation.id, label: `${quotationLabelById.get(quotation.id)} · ${statusLabels[quotation.status] ?? quotation.status}` }))]} /></label>
+            <label>帶入報價單（選填）<RoundedSelect name="quotationId" defaultValue={selectedQuotation?.id ?? ""} options={[{ value: "", label: "不帶入報價單" }, ...approvedQuotations.map((quotation) => ({ value: quotation.id, label: `${quotationLabelById.get(quotation.id)} · ${quotationStatusLabels[quotation.status] ?? quotation.status}` }))]} /></label>
             <label>建立後狀態<RoundedSelect name="status" defaultValue="draft" options={statusOptions.filter((option) => option.value === "draft" || option.value === "ordered")} /></label>
           </div>
           <PurchaseOrderLineItems products={products} variants={variants} initialLines={selectedQuotationLines} />
