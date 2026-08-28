@@ -5,6 +5,7 @@ import { RoundedDatePicker } from "@/components/rounded-date-picker";
 import { RoundedSelect } from "@/components/rounded-select";
 import adminStyles from "../admin.module.css";
 import { createPurchaseOrderAction, updatePurchaseOrderStatusAction } from "./actions";
+import { PurchaseOrderLineItems } from "./purchase-order-line-items";
 import styles from "./purchase-orders.module.css";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +54,6 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
   const orders = ordersResult.data ?? [];
   const items = itemsResult.data ?? [];
   const supplierNameById = new Map(suppliers.map((supplier) => [supplier.id, supplier.name]));
-  const productNameById = new Map(products.map((product) => [product.id, product.name]));
   const hasReadError = suppliersResult.error || productsResult.error || variantsResult.error || quotationsResult.error || ordersResult.error || itemsResult.error;
   const itemsByOrder = new Map<string, typeof items>();
   for (const item of items) itemsByOrder.set(item.purchase_order_id, [...(itemsByOrder.get(item.purchase_order_id) ?? []), item]);
@@ -81,13 +81,8 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
             <label>帶入報價單（選填）<RoundedSelect name="quotationId" defaultValue="" options={[{ value: "", label: "不帶入報價單" }, ...quotations.map((quotation) => ({ value: quotation.id, label: `${quotationLabelById.get(quotation.id)} · ${statusLabels[quotation.status] ?? quotation.status}` }))]} /></label>
             <label>建立後狀態<RoundedSelect name="status" defaultValue="draft" options={statusOptions.filter((option) => option.value === "draft" || option.value === "ordered")} /></label>
           </div>
+          <PurchaseOrderLineItems products={products} variants={variants} />
           <div className={styles.twoColumns}>
-            <label>商品（選填）<RoundedSelect name="productId" defaultValue="" options={[{ value: "", label: "暫存商品／下方自行填寫" }, ...products.map((product) => ({ value: product.id, label: product.name }))]} /></label>
-            <label>規格（選填）<RoundedSelect name="variantId" defaultValue="" options={[{ value: "", label: "不指定規格" }, ...variants.map((variant) => ({ value: variant.id, label: `${productNameById.get(variant.product_id) ?? "商品"} · ${variant.sku}` }))]} /></label>
-            <label>暫存商品名稱（選填）<input className="input" name="tempProductName" maxLength={160} placeholder="未建檔商品才需要填寫" /></label>
-            <label>規格備註（選填）<input className="input" name="variantName" maxLength={160} placeholder="例如：黑色／M" /></label>
-            <label>單件成本<input className="input" name="unitCost" type="number" min="0.01" step="0.01" required placeholder="例如：18500" /></label>
-            <label>採購數量<input className="input" name="quantity" type="number" min="1" step="1" defaultValue="1" required /></label>
             <label>運費<input className="input" name="shippingCost" type="number" min="0" step="0.01" defaultValue="0" required /></label>
             <label>其他費用<input className="input" name="otherCost" type="number" min="0" step="0.01" defaultValue="0" required /></label>
           </div>
@@ -97,8 +92,8 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
       </section>
       <section className={adminStyles.panel}>
         <h2>採購狀態流程</h2>
-        <ol className={styles.steps}><li><strong>草稿</strong><span>確認供應商、成本、數量與交期。</span></li><li><strong>已下單</strong><span>已向供應商發出採購需求。</span></li><li><strong>部分到貨／已收貨</strong><span>V1.5 先記錄狀態；實際入庫與分批驗收將在到貨模組接入。</span></li><li><strong>已取消</strong><span>保留採購歷史，不直接刪除。</span></li></ol>
-        <p className={styles.hint}>一張採購單目前先建立一筆明細；後續可擴充多商品與分批到貨。</p>
+        <ol className={styles.steps}><li><strong>草稿</strong><span>確認供應商、成本、數量與交期。</span></li><li><strong>已下單</strong><span>已向供應商發出採購需求。</span></li><li><strong>部分到貨／已收貨</strong><span>到貨頁支援分批驗收，每次驗收會同步更新庫存與採購單狀態。</span></li><li><strong>已取消</strong><span>保留採購歷史，不直接刪除。</span></li></ol>
+        <p className={styles.hint}>一張採購單可建立多筆商品明細；到貨頁可分批登記各明細的實收數量。</p>
       </section>
     </div>
     <section className={adminStyles.panel}>

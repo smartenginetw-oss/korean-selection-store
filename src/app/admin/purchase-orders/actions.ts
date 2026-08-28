@@ -22,6 +22,9 @@ const PurchaseOrderFormSchema = z.object({
   shippingCost: z.coerce.number().min(0).max(100000000),
   otherCost: z.coerce.number().min(0).max(100000000),
   note: z.string().trim().max(2000).optional(),
+});
+
+const PurchaseOrderItemFormSchema = z.object({
   productId: z.string().uuid().optional(),
   variantId: z.string().uuid().optional(),
   tempProductName: z.string().trim().max(160).optional(),
@@ -36,12 +39,12 @@ function redirectToOrders(status: "created" | "updated" | "error", message?: str
   redirect(`/admin/purchase-orders?${params.toString()}`);
 }
 
-function optionalUuid(value: FormDataEntryValue | null) {
+function optionalUuid(value: FormDataEntryValue | null | undefined) {
   const text = String(value ?? "").trim();
   return text || undefined;
 }
 
-function optionalText(value: FormDataEntryValue | null) {
+function optionalText(value: FormDataEntryValue | null | undefined) {
   const text = String(value ?? "").trim();
   return text || undefined;
 }
@@ -65,12 +68,6 @@ export async function createPurchaseOrderAction(formData: FormData) {
     shippingCost: formData.get("shippingCost"),
     otherCost: formData.get("otherCost"),
     note: optionalText(formData.get("note")),
-    productId: optionalUuid(formData.get("productId")),
-    variantId: optionalUuid(formData.get("variantId")),
-    tempProductName: optionalText(formData.get("tempProductName")),
-    variantName: optionalText(formData.get("variantName")),
-    unitCost: formData.get("unitCost"),
-    quantity: formData.get("quantity"),
   });
   if (!parsed.success || !validDate(parsed.success ? parsed.data.orderedDate : "") || (parsed.success && parsed.data.expectedDate && !validDate(parsed.data.expectedDate))) {
     redirectToOrders("error", "請確認供應商、日期、成本與數量格式。");
@@ -88,27 +85,72 @@ export async function createPurchaseOrderAction(formData: FormData) {
   const { data: supplier } = await supabase.from("suppliers").select("id").eq("id", data.supplierId).eq("is_active", true).maybeSingle();
   if (!supplier) redirectToOrders("error", "供應商不存在或已停用，請重新選擇。");
 
-  let productId = data.productId ?? null;
-  const variantId = data.variantId ?? null;
-  let productName = data.tempProductName ?? "";
-  let sku: string | null = null;
-  let variantName = data.variantName ?? null;
+  const productIds = formData.getAll("productId");
+  const variantIds = formData.getAll("variantId");
+  const tempProductNames = formData.getAll("tempProductName");
+  const variantNames = formData.getAll("variantName");
+  const unitCosts = formData.getAll("unitCost");
+  const quantities = formData.getAll("quantity");
+  const lineCount = Math.max(productIds.length, variantIds.length, tempProductNames.length, variantNames.length, unitCosts.length, quantities.length);
+  if (!lineCount || lineCount > 20) redirectToOrders("error", "採購明細至少需要一筆，且單張採購單最多 20 筆。");
 
-  if (variantId) {
-    const { data: variant } = await supabase.from("product_variants").select("id,product_id,sku").eq("id", variantId).eq("status", "active").maybeSingle();
-    if (!variant) redirectToOrders("error", "所選規格不存在或已停用。");
-    if (productId && variant.product_id !== productId) redirectToOrders("error", "商品與規格不一致，請重新選擇。");
-    productId = variant.product_id;
-    sku = variant.sku;
-    if (!variantName) variantName = variant.sku;
+  const itemInputs: Array<z.infer<typeof PurchaseOrderItemFormSchema>> = [];
+  for (let index = 0; index < lineCount; index += 1) {
+    const parsedItem = PurchaseOrderItemFormSchema.safeParse({
+      productId: optionalUuid(productIds[index]),
+      variantId: optionalUuid(variantIds[index]),
+      tempProductName: optionalText(tempProductNames[index]),
+      variantName: optionalText(variantNames[index]),
+      unitCost: unitCosts[index],
+      quantity: quantities[index],
+    });
+    if (!parsedItem.success) redirectToOrders("error", `第 ${index + 1} 筆採購明細的成本或數量格式不正確。`);
+    itemInputs.push(parsedItem.data);
   }
 
-  if (productId) {
-    const { data: product } = await supabase.from("products").select("id,name").eq("id", productId).eq("status", "active").maybeSingle();
-    if (!product) redirectToOrders("error", "所選商品不存在或尚未上架。");
-    productName = product.name;
+  const resolvedItems: Array<{
+    product_id: string | null;
+    variant_id: string | null;
+    product_name: string;
+    variant_name: string | null;
+    sku: string | null;
+    unit_cost: number;
+    quantity: number;
+    currency: typeof currencies[number];
+  }> = [];
+  for (const [index, item] of itemInputs.entries()) {
+    let productId = item.productId ?? null;
+    const variantId = item.variantId ?? null;
+    let productName = item.tempProductName ?? "";
+    let sku: string | null = null;
+    let variantName = item.variantName ?? null;
+
+    if (variantId) {
+      const { data: variant } = await supabase.from("product_variants").select("id,product_id,sku").eq("id", variantId).eq("status", "active").maybeSingle();
+      if (!variant) redirectToOrders("error", `第 ${index + 1} 筆規格不存在或已停用。`);
+      if (productId && variant.product_id !== productId) redirectToOrders("error", `第 ${index + 1} 筆商品與規格不一致。`);
+      productId = variant.product_id;
+      sku = variant.sku;
+      if (!variantName) variantName = variant.sku;
+    }
+
+    if (productId) {
+      const { data: product } = await supabase.from("products").select("id,name").eq("id", productId).eq("status", "active").maybeSingle();
+      if (!product) redirectToOrders("error", `第 ${index + 1} 筆商品不存在或尚未上架。`);
+      productName = product.name;
+    }
+    if (!productName) redirectToOrders("error", `第 ${index + 1} 筆請選擇既有商品，或填寫暫存商品名稱。`);
+    resolvedItems.push({
+      product_id: productId,
+      variant_id: variantId,
+      product_name: productName,
+      variant_name: variantName,
+      sku,
+      unit_cost: item.unitCost,
+      quantity: item.quantity,
+      currency: data.currency,
+    });
   }
-  if (!productName) redirectToOrders("error", "請選擇既有商品，或填寫暫存商品名稱。");
 
   let quotationSupplierId: string | null = null;
   if (data.quotationId) {
@@ -139,17 +181,10 @@ export async function createPurchaseOrderAction(formData: FormData) {
     redirectToOrders("error", "採購單尚未建立，請稍後再試。");
   }
 
-  const { error: itemError } = await supabase.from("purchase_order_items").insert({
+  const { error: itemError } = await supabase.from("purchase_order_items").insert(resolvedItems.map((item) => ({
     purchase_order_id: purchaseOrder.id,
-    product_id: productId,
-    variant_id: variantId,
-    product_name: productName,
-    variant_name: variantName,
-    sku,
-    unit_cost: data.unitCost,
-    quantity: data.quantity,
-    currency: data.currency,
-  });
+    ...item,
+  })));
 
   if (itemError) {
     console.error("[admin/purchase-orders] create item failed", itemError.message);
