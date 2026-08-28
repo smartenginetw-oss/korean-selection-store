@@ -43,15 +43,17 @@ export default async function PurchaseOrderReceivePage({ params, searchParams }:
   const supplier = supplierResult.data;
   const items = itemsResult.data ?? [];
   const receiptItemsResult = items.length
-    ? await supabase.from("purchase_order_receipt_items").select("purchase_order_item_id,quantity_received,damaged_quantity").in("purchase_order_item_id", items.map((item) => item.id))
+    ? await supabase.from("purchase_order_receipt_items").select("receipt_id,purchase_order_item_id,product_name,sku,quantity_received,damaged_quantity").in("purchase_order_item_id", items.map((item) => item.id))
     : { data: [], error: null };
   const receiptItems = receiptItemsResult.data ?? [];
   const receipts = receiptsResult.data ?? [];
   const receivedByItem = new Map<string, number>();
   const damagedByItem = new Map<string, number>();
+  const receiptItemsByReceipt = new Map<string, typeof receiptItems>();
   for (const item of receiptItems) {
     receivedByItem.set(item.purchase_order_item_id, (receivedByItem.get(item.purchase_order_item_id) ?? 0) + Number(item.quantity_received || 0));
     damagedByItem.set(item.purchase_order_item_id, (damagedByItem.get(item.purchase_order_item_id) ?? 0) + Number(item.damaged_quantity || 0));
+    receiptItemsByReceipt.set(item.receipt_id, [...(receiptItemsByReceipt.get(item.receipt_id) ?? []), item]);
   }
   const receivableItems = items.filter((item) => item.variant_id && Number(item.quantity) - (receivedByItem.get(item.id) ?? 0) - (damagedByItem.get(item.id) ?? 0) > 0);
   const hasReadError = supplierResult.error || itemsResult.error || receiptItemsResult.error || receiptsResult.error;
@@ -74,6 +76,6 @@ export default async function PurchaseOrderReceivePage({ params, searchParams }:
         <p className={styles.formHint}>良品數量會增加可售庫存；損耗／瑕疵數量只會留在到貨紀錄，不會增加庫存。</p><button className="button button-primary" type="submit" disabled={!receivableItems.length || order.status === "draft" || order.status === "cancelled" || order.status === "received"}>確認到貨並入庫</button>
       </form>
     </section>
-    <section className={adminStyles.panel}><div className={adminStyles.panelHeading}><h2>到貨紀錄</h2><span>{receipts.length} 筆</span></div>{receipts.length ? <div className={styles.receiptList}>{receipts.map((receipt) => <article className={styles.receipt} key={receipt.id}><div><strong>{receipt.receipt_number}</strong><small>{formatDate(receipt.received_date)}</small></div>{receipt.note && <p>{receipt.note}</p>}</article>)}</div> : <p className={adminStyles.empty}>尚無到貨紀錄。</p>}</section>
+    <section className={adminStyles.panel}><div className={adminStyles.panelHeading}><h2>到貨紀錄</h2><span>{receipts.length} 筆</span></div>{receipts.length ? <div className={styles.receiptList}>{receipts.map((receipt) => { const receiptLines = receiptItemsByReceipt.get(receipt.id) ?? []; return <article className={styles.receipt} key={receipt.id}><div className={styles.receiptHeading}><div><strong>{receipt.receipt_number}</strong><small>{formatDate(receipt.received_date)}</small></div><span>{receiptLines.reduce((sum, item) => sum + Number(item.quantity_received || 0), 0)} 件良品 · {receiptLines.reduce((sum, item) => sum + Number(item.damaged_quantity || 0), 0)} 件損耗</span></div>{receiptLines.length > 0 && <div className={styles.receiptLines}>{receiptLines.map((item) => <div className={styles.receiptLine} key={`${receipt.id}-${item.purchase_order_item_id}`}><span>{item.product_name}<small>{item.sku ?? "暫存商品"}</small></span><span>良品 {item.quantity_received} · 損耗 {item.damaged_quantity}</span></div>)}</div>}{receipt.note && <p>{receipt.note}</p>}</article>; })}</div> : <p className={adminStyles.empty}>尚無到貨紀錄。</p>}</section>
   </>;
 }
