@@ -31,7 +31,7 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
     </div>
     {error && <div className={styles.notice}>{error}</div>}
     <section className={styles.panel}><p className={styles.panelIntro}>調整會檢查已保留庫存，並留下庫存異動與老闆稽核紀錄。</p><InventoryTable rows={rows} /></section>
-    <section className={`${styles.panel} ${styles.inventoryHistoryPanel}`}>
+    <section id="inventory-movements" className={`${styles.panel} ${styles.inventoryHistoryPanel}`}>
       <div className={styles.sectionHeading}>
         <div><h2>最近庫存異動</h2><p className={styles.panelIntro}>保留／釋放事件會顯示在訂單進度；此處記錄實際入庫、扣庫、回庫與手動調整。</p></div>
         <div className={styles.sectionActions}><span className={styles.sectionMeta}>{hasFilters ? `符合 ${movements.length} 筆` : `最近 ${movements.length} 筆`}</span><Link className="button button-secondary button-small" href={exportHref}>下載 CSV</Link></div>

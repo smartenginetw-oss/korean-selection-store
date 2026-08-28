@@ -8,7 +8,9 @@ const sections: Array<[string, string, BackofficeCapability | null]> = [
   ["總覽", "/admin", null], ["商品", "/admin/products", "catalog"], ["新增商品", "/admin/products/new", "catalog"],
   ["商品分類", "/admin/categories", "catalog"],
   ["供應商", "/admin/suppliers", "procurement"], ["廠商報價", "/admin/quotations", "procurement"], ["採購單", "/admin/purchase-orders", "procurement"],
-  ["庫存", "/admin/inventory", "inventory"], ["訂單", "/admin/orders", "orders"], ["顧客管理", "/admin/customers", "customers"],
+  ["到貨驗收", "/admin/purchase-orders?filter=receivable", "procurement"],
+  ["庫存", "/admin/inventory", "inventory"], ["入庫紀錄", "/admin/inventory?view=movements#inventory-movements", "inventory"],
+  ["訂單", "/admin/orders", "orders"], ["顧客管理", "/admin/customers", "customers"],
   ["優惠碼管理", "/admin/coupons", "coupons"], ["內容管理", "/admin/content", "content"], ["報表分析", "/admin/reports", "reports"],
 ];
 

@@ -25,6 +25,14 @@ const quotationStatusLabels: Record<string, string> = {
   rejected: "已拒絕",
   converted: "已轉採購單",
 };
+const purchaseOrderFilterOptions = [
+  { value: "all", label: "全部採購單" },
+  { value: "receivable", label: "待到貨（已下單／部分到貨）" },
+  { value: "open", label: "未完成" },
+  { value: "received", label: "已收貨" },
+  { value: "cancelled", label: "已取消" },
+] as const;
+type PurchaseOrderFilter = (typeof purchaseOrderFilterOptions)[number]["value"];
 const currencyOptions = ["KRW", "TWD", "USD", "CNY"].map((currency) => ({ value: currency, label: currency }));
 const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({ value, label }));
 
@@ -51,9 +59,16 @@ function formatMoney(value: number, currency: string) {
   return `${currency} ${new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 2 }).format(Number(value) || 0)}`;
 }
 
-export default async function AdminPurchaseOrdersPage({ searchParams }: { searchParams: Promise<{ status?: string; message?: string; quotationId?: string }> }) {
+function normalizePurchaseOrderFilter(value?: string): PurchaseOrderFilter {
+  return purchaseOrderFilterOptions.some((option) => option.value === value)
+    ? value as PurchaseOrderFilter
+    : "all";
+}
+
+export default async function AdminPurchaseOrdersPage({ searchParams }: { searchParams: Promise<{ status?: string; message?: string; quotationId?: string; filter?: string }> }) {
   await requireProcurement();
   const params = await searchParams;
+  const activeFilter = normalizePurchaseOrderFilter(params.filter);
   const supabase = await createClient();
   const [suppliersResult, productsResult, variantsResult, quotationsResult, quotationItemsResult, ordersResult, itemsResult] = await Promise.all([
     supabase.from("suppliers").select("id,name,country,is_active").order("is_active", { ascending: false }).order("name"),
@@ -71,6 +86,13 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
   const quotations = quotationsResult.data ?? [];
   const quotationItems = quotationItemsResult.data ?? [];
   const orders = ordersResult.data ?? [];
+  const visibleOrders = orders.filter((order) => {
+    if (activeFilter === "receivable") return order.status === "ordered" || order.status === "partial_received";
+    if (activeFilter === "open") return order.status === "draft" || order.status === "ordered" || order.status === "partial_received";
+    if (activeFilter === "received") return order.status === "received";
+    if (activeFilter === "cancelled") return order.status === "cancelled";
+    return true;
+  });
   const items = itemsResult.data ?? [];
   const supplierNameById = new Map(suppliers.map((supplier) => [supplier.id, supplier.name]));
   const hasReadError = suppliersResult.error || productsResult.error || variantsResult.error || quotationsResult.error || quotationItemsResult.error || ordersResult.error || itemsResult.error;
@@ -136,8 +158,16 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
       </section>
     </div>
     <section className={adminStyles.panel}>
-      <div className={adminStyles.panelHeading}><h2>採購紀錄</h2><span>{orders.length} 張</span></div>
-      {orders.length ? <div className={styles.list}>{orders.map((order) => { const orderItems = itemsByOrder.get(order.id) ?? []; return <article className={styles.item} key={order.id}>
+      <div className={styles.recordsHeader}>
+        <div className={adminStyles.panelHeading}><h2>採購紀錄</h2><span>{activeFilter === "all" ? `${orders.length} 張` : `${visibleOrders.length} / ${orders.length} 張`}</span></div>
+        <form className={styles.filterBar} method="get">
+          <label><span>快速檢視</span><RoundedSelect name="filter" defaultValue={activeFilter} options={purchaseOrderFilterOptions.map((option) => ({ value: option.value, label: option.label }))} /></label>
+          <button className="button button-secondary button-small" type="submit">套用</button>
+          {activeFilter !== "all" && <Link className="button button-secondary button-small" href="/admin/purchase-orders">查看全部</Link>}
+        </form>
+      </div>
+      {activeFilter === "receivable" && <p className={styles.filterHint}>目前只顯示可登記到貨的採購單；草稿需先更新為「已下單」。</p>}
+      {visibleOrders.length ? <div className={styles.list}>{visibleOrders.map((order) => { const orderItems = itemsByOrder.get(order.id) ?? []; return <article className={styles.item} key={order.id}>
         <div className={styles.itemHeading}><div><strong>{order.po_number}</strong><small>{supplierNameById.get(order.supplier_id) ?? "未知供應商"} · 下單 {formatDate(order.ordered_date)}{order.expected_date ? ` · 預計 ${formatDate(order.expected_date)}` : ""}</small></div><span className="badge badge-stock">{statusLabels[order.status] ?? order.status}</span></div>
         <div className={styles.itemBody}>{orderItems.map((item) => <div className={styles.line} key={item.id}><span>{item.product_name}{item.variant_name ? ` · ${item.variant_name}` : ""}<small>{item.sku ?? "暫存商品"} · 數量 {item.quantity} · 單件 {formatMoney(Number(item.unit_cost), item.currency)}</small></span><strong>{formatMoney(Number(item.total_cost), item.currency)}</strong></div>)}{!orderItems.length && <p className={styles.hint}>尚無採購明細。</p>}</div>
         <div className={styles.costs}><span>商品成本 <strong>{formatMoney(Number(order.subtotal), order.currency)}</strong></span><span>運費 <strong>{formatMoney(Number(order.shipping_cost), order.currency)}</strong></span><span>其他 <strong>{formatMoney(Number(order.other_cost), order.currency)}</strong></span><span>合計 <strong>{formatMoney(Number(order.total_cost), order.currency)}</strong></span></div>
