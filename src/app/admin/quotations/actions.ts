@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { requireProcurement } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
 
 const currencyValues = ["KRW", "TWD", "USD", "CNY"] as const;
 const quotationStatuses = ["draft", "received", "approved", "rejected", "converted"] as const;
@@ -18,6 +19,8 @@ const QuotationFormSchema = z.object({
   exchangeRate: z.coerce.number().positive().max(100000000),
   status: z.enum(quotationStatuses),
   note: z.string().trim().max(2000).optional(),
+});
+const QuotationLineSchema = z.object({
   productId: z.string().uuid().optional(),
   variantId: z.string().uuid().optional(),
   tempProductName: z.string().trim().max(160).optional(),
@@ -43,6 +46,10 @@ function optionalText(value: FormDataEntryValue | null) {
   return text || undefined;
 }
 
+function repeatedText(formData: FormData, name: string) {
+  return formData.getAll(name).map((value) => String(value));
+}
+
 function validDate(value: string) {
   const date = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
@@ -58,13 +65,6 @@ export async function createQuotationAction(formData: FormData) {
     exchangeRate: formData.get("exchangeRate"),
     status: formData.get("status"),
     note: optionalText(formData.get("note")),
-    productId: optionalUuid(formData.get("productId")),
-    variantId: optionalUuid(formData.get("variantId")),
-    tempProductName: optionalText(formData.get("tempProductName")),
-    variantName: optionalText(formData.get("variantName")),
-    unitCost: formData.get("unitCost"),
-    moq: formData.get("moq"),
-    quantity: formData.get("quantity"),
   });
   if (!parsed.success || !validDate(parsed.success ? parsed.data.quoteDate : "")) {
     quotationRedirect("error", "請確認供應商、報價日期、成本與數量格式。 ");
@@ -76,27 +76,63 @@ export async function createQuotationAction(formData: FormData) {
   const { data: supplier } = await supabase.from("suppliers").select("id").eq("id", data.supplierId).eq("is_active", true).maybeSingle();
   if (!supplier) quotationRedirect("error", "供應商不存在或已停用，請重新選擇。 ");
 
-  let productId = data.productId ?? null;
-  const variantId = data.variantId ?? null;
-  let productName = data.tempProductName ?? "";
-  let sku: string | null = null;
-  let variantName = data.variantName ?? null;
-
-  if (variantId) {
-    const { data: variant } = await supabase.from("product_variants").select("id,product_id,sku").eq("id", variantId).eq("status", "active").maybeSingle();
-    if (!variant) quotationRedirect("error", "所選規格不存在或已停用。 ");
-    if (productId && variant.product_id !== productId) quotationRedirect("error", "商品與規格不一致，請重新選擇。 ");
-    productId = variant.product_id;
-    sku = variant.sku;
-    if (!variantName) variantName = variant.sku;
+  const fields = ["productId", "variantId", "tempProductName", "variantName", "unitCost", "moq", "quantity"];
+  const repeated = Object.fromEntries(fields.map((field) => [field, repeatedText(formData, field)])) as Record<string, string[]>;
+  const lineCount = repeated.productId.length;
+  if (!lineCount || lineCount > 20 || fields.some((field) => repeated[field].length !== lineCount)) {
+    quotationRedirect("error", "報價明細至少需要一筆，且單張報價單最多 20 筆。 ");
   }
 
-  if (productId) {
-    const { data: product } = await supabase.from("products").select("id,name").eq("id", productId).eq("status", "active").maybeSingle();
-    if (!product) quotationRedirect("error", "所選商品不存在或尚未上架。 ");
-    productName = product.name;
+  const parsedLines = repeated.productId.map((_, index) => {
+    const line = QuotationLineSchema.safeParse({
+      productId: optionalUuid(repeated.productId[index]),
+      variantId: optionalUuid(repeated.variantId[index]),
+      tempProductName: optionalText(repeated.tempProductName[index]),
+      variantName: optionalText(repeated.variantName[index]),
+      unitCost: repeated.unitCost[index],
+      moq: repeated.moq[index],
+      quantity: repeated.quantity[index],
+    });
+    if (!line.success) quotationRedirect("error", `第 ${index + 1} 筆報價明細的商品、成本、MOQ 或數量格式不正確。 `);
+    return line.data;
+  });
+
+  type QuotationItemInsert = Database["public"]["Tables"]["supplier_quotation_items"]["Insert"];
+  const resolvedItems: Omit<QuotationItemInsert, "quotation_id">[] = [];
+  for (const [index, line] of parsedLines.entries()) {
+    let productId = line.productId ?? null;
+    const variantId = line.variantId ?? null;
+    let productName = line.tempProductName ?? "";
+    let sku: string | null = null;
+    let variantName = line.variantName ?? null;
+
+    if (variantId) {
+      const { data: variant } = await supabase.from("product_variants").select("id,product_id,sku").eq("id", variantId).eq("status", "active").maybeSingle();
+      if (!variant) quotationRedirect("error", `第 ${index + 1} 筆報價明細的規格不存在或已停用。 `);
+      if (productId && variant.product_id !== productId) quotationRedirect("error", `第 ${index + 1} 筆報價明細的商品與規格不一致。 `);
+      productId = variant.product_id;
+      sku = variant.sku;
+      if (!variantName) variantName = variant.sku;
+    }
+
+    if (productId) {
+      const { data: product } = await supabase.from("products").select("id,name").eq("id", productId).eq("status", "active").maybeSingle();
+      if (!product) quotationRedirect("error", `第 ${index + 1} 筆報價明細的商品不存在或尚未上架。 `);
+      productName = product.name;
+    }
+    if (!productName) quotationRedirect("error", `第 ${index + 1} 筆報價明細請選擇既有商品，或填寫暫存商品名稱。 `);
+    resolvedItems.push({
+      product_id: productId,
+      variant_id: variantId,
+      product_name: productName,
+      variant_name: variantName,
+      sku,
+      unit_cost: line.unitCost,
+      moq: line.moq,
+      quantity: line.quantity,
+      currency: data.currency,
+    });
   }
-  if (!productName) quotationRedirect("error", "請選擇既有商品，或填寫暫存商品名稱。 ");
 
   const { data: quotation, error: quotationError } = await supabase.from("supplier_quotations").insert({
     supplier_id: data.supplierId,
@@ -116,18 +152,7 @@ export async function createQuotationAction(formData: FormData) {
     quotationRedirect("error", "報價單尚未建立，請稍後再試。 ");
   }
 
-  const { error: itemError } = await supabase.from("supplier_quotation_items").insert({
-    quotation_id: quotation.id,
-    product_id: productId,
-    variant_id: variantId,
-    product_name: productName,
-    variant_name: variantName,
-    sku,
-    unit_cost: data.unitCost,
-    moq: data.moq,
-    quantity: data.quantity,
-    currency: data.currency,
-  });
+  const { error: itemError } = await supabase.from("supplier_quotation_items").insert(resolvedItems.map((item) => ({ quotation_id: quotation.id, ...item })));
 
   if (itemError) {
     console.error("[admin/quotations] create item failed", itemError.message);

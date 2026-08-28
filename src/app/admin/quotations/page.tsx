@@ -5,6 +5,7 @@ import { RoundedDatePicker } from "@/components/rounded-date-picker";
 import { RoundedSelect } from "@/components/rounded-select";
 import adminStyles from "../admin.module.css";
 import { createQuotationAction, updateQuotationStatusAction } from "./actions";
+import { QuotationLineItems } from "./quotation-line-items";
 import styles from "./quotations.module.css";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +54,6 @@ export default async function AdminQuotationsPage({ searchParams }: { searchPara
   const quotations = quotationsResult.data ?? [];
   const items = itemsResult.data ?? [];
   const supplierNameById = new Map(suppliers.map((supplier) => [supplier.id, supplier.name]));
-  const productNameById = new Map(products.map((product) => [product.id, product.name]));
   const hasReadError = suppliersResult.error || productsResult.error || variantsResult.error || quotationsResult.error || itemsResult.error;
   const itemsByQuotation = new Map<string, typeof items>();
   for (const item of items) itemsByQuotation.set(item.quotation_id, [...(itemsByQuotation.get(item.quotation_id) ?? []), item]);
@@ -78,15 +78,7 @@ export default async function AdminQuotationsPage({ searchParams }: { searchPara
             <label>匯率（對 TWD）<input className="input" name="exchangeRate" type="number" min="0.000001" step="0.000001" defaultValue="1" required /></label>
             <label>狀態<RoundedSelect name="status" options={statusOptions.filter(({ value }) => value !== "converted")} defaultValue="draft" ariaLabel="報價單狀態" /></label>
           </div>
-          <label>商品（選填）<RoundedSelect name="productId" options={[{ value: "", label: "暫存商品／下方自行填寫" }, ...products.map((product) => ({ value: product.id, label: product.name }))]} defaultValue="" ariaLabel="商品" /></label>
-          <label>規格（選填）<RoundedSelect name="variantId" options={[{ value: "", label: "不指定規格" }, ...variants.map((variant) => ({ value: variant.id, label: `${productNameById.get(variant.product_id) ?? "商品"} · ${variant.sku}` }))]} defaultValue="" ariaLabel="規格" /></label>
-          <div className={styles.twoColumns}>
-            <label>暫存商品名稱（選填）<input className="input" name="tempProductName" maxLength={160} placeholder="未建檔商品才需要填寫" /></label>
-            <label>規格備註（選填）<input className="input" name="variantName" maxLength={160} placeholder="例如：黑色／M" /></label>
-            <label>單件成本<input className="input" name="unitCost" type="number" min="0.01" step="0.01" required placeholder="例如：18500" /></label>
-            <label>MOQ<input className="input" name="moq" type="number" min="1" step="1" defaultValue="1" required /></label>
-            <label>報價數量<input className="input" name="quantity" type="number" min="1" step="1" defaultValue="1" required /></label>
-          </div>
+          <QuotationLineItems products={products} variants={variants} />
           <label>報價備註<textarea className="input" name="note" rows={3} maxLength={2000} placeholder="付款、交期或其他條件（選填）" /></label>
           <button className="button button-primary" type="submit" disabled={!suppliers.length}>建立報價單</button>
         </form>
