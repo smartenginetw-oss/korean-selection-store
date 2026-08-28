@@ -16,7 +16,7 @@
 .panelHeading h2 { margin: 0; font-size: 1.05rem; }
 .panelHeading span { color: var(--color-text-muted); font-size: .72rem; }
 .datePicker { position: relative; }
-.dateButton { width: 100%; min-height: 42px; padding: 9px 12px 9px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--color-border); border-radius: 14px; background: #fffdfa; color: var(--color-text-primary); cursor: pointer; text-align: left; transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
+.dateButton { width: 100%; min-height: 48px; padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: #fffdfa; color: var(--color-text-primary); cursor: pointer; text-align: left; transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
 .dateButton:hover, .dateButton:focus-visible { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgb(120 97 88 / 12%); }
 .dateButton:active { transform: scale(.99); }
 .dateButton svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--color-primary); }

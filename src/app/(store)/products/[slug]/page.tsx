@@ -9,10 +9,11 @@ import { formatTwd } from "@/lib/money";
 import { siteName, siteUrl } from "@/lib/site";
 import styles from "./product.module.css";
 
-export async function generateStaticParams() {
-  const products = await getCatalog();
-  return products.map(({ slug }) => ({ slug }));
-}
+// Product availability and pricing can change independently of a deployment.
+// Render this route on demand so the server-side badge and structured data do
+// not remain a stale build-time snapshot; the client panel still re-checks the
+// selected variant before purchase.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;

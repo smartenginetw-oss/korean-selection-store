@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireProcurement } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
+import { RoundedDatePicker } from "@/components/rounded-date-picker";
+import { RoundedSelect } from "@/components/rounded-select";
 import adminStyles from "../admin.module.css";
 import { createPurchaseOrderAction, updatePurchaseOrderStatusAction } from "./actions";
 import styles from "./purchase-orders.module.css";
@@ -14,7 +16,8 @@ const statusLabels: Record<string, string> = {
   received: "已收貨",
   cancelled: "已取消",
 };
-const currencies = ["KRW", "TWD", "USD", "CNY"];
+const currencyOptions = ["KRW", "TWD", "USD", "CNY"].map((currency) => ({ value: currency, label: currency }));
+const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({ value, label }));
 
 function todayInput() {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
@@ -69,18 +72,18 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
         {!suppliers.filter((supplier) => supplier.is_active).length && <p className={styles.hint}>請先到「供應商」建立至少一家啟用中的供應商。</p>}
         <form action={createPurchaseOrderAction} className={styles.form}>
           <div className={styles.twoColumns}>
-            <label>供應商<select className="input" name="supplierId" required defaultValue=""><option value="" disabled>選擇供應商</option>{suppliers.filter((supplier) => supplier.is_active).map((supplier) => <option value={supplier.id} key={supplier.id}>{supplier.name} · {supplier.country}</option>)}</select></label>
+            <label>供應商<RoundedSelect name="supplierId" defaultValue="" options={[{ value: "", label: "選擇供應商" }, ...suppliers.filter((supplier) => supplier.is_active).map((supplier) => ({ value: supplier.id, label: `${supplier.name} · ${supplier.country}` }))]} /></label>
             <label>採購單號<input className="input" name="poNumber" required maxLength={80} placeholder="例如：PO-2026-0827-01" /></label>
-            <label>下單日期<input className="input" name="orderedDate" type="date" required defaultValue={todayInput()} /></label>
-            <label>預計到貨日<input className="input" name="expectedDate" type="date" /></label>
-            <label>幣別<select className="input" name="currency" defaultValue="KRW">{currencies.map((currency) => <option value={currency} key={currency}>{currency}</option>)}</select></label>
+            <label>下單日期<RoundedDatePicker name="orderedDate" label="下單日期" initialValue={todayInput()} required /></label>
+            <label>預計到貨日<RoundedDatePicker name="expectedDate" label="預計到貨日" /></label>
+            <label>幣別<RoundedSelect name="currency" defaultValue="KRW" options={currencyOptions} /></label>
             <label>匯率（對 TWD）<input className="input" name="exchangeRate" type="number" min="0.000001" step="0.000001" defaultValue="1" required /></label>
-            <label>帶入報價單（選填）<select className="input" name="quotationId" defaultValue=""><option value="">不帶入報價單</option>{quotations.map((quotation) => <option value={quotation.id} key={quotation.id}>{quotationLabelById.get(quotation.id)} · {statusLabels[quotation.status] ?? quotation.status}</option>)}</select></label>
-            <label>建立後狀態<select className="input" name="status" defaultValue="draft"><option value="draft">草稿</option><option value="ordered">已下單</option></select></label>
+            <label>帶入報價單（選填）<RoundedSelect name="quotationId" defaultValue="" options={[{ value: "", label: "不帶入報價單" }, ...quotations.map((quotation) => ({ value: quotation.id, label: `${quotationLabelById.get(quotation.id)} · ${statusLabels[quotation.status] ?? quotation.status}` }))]} /></label>
+            <label>建立後狀態<RoundedSelect name="status" defaultValue="draft" options={statusOptions.filter((option) => option.value === "draft" || option.value === "ordered")} /></label>
           </div>
           <div className={styles.twoColumns}>
-            <label>商品（選填）<select className="input" name="productId" defaultValue=""><option value="">暫存商品／下方自行填寫</option>{products.map((product) => <option value={product.id} key={product.id}>{product.name}</option>)}</select></label>
-            <label>規格（選填）<select className="input" name="variantId" defaultValue=""><option value="">不指定規格</option>{variants.map((variant) => <option value={variant.id} key={variant.id}>{productNameById.get(variant.product_id) ?? "商品"} · {variant.sku}</option>)}</select></label>
+            <label>商品（選填）<RoundedSelect name="productId" defaultValue="" options={[{ value: "", label: "暫存商品／下方自行填寫" }, ...products.map((product) => ({ value: product.id, label: product.name }))]} /></label>
+            <label>規格（選填）<RoundedSelect name="variantId" defaultValue="" options={[{ value: "", label: "不指定規格" }, ...variants.map((variant) => ({ value: variant.id, label: `${productNameById.get(variant.product_id) ?? "商品"} · ${variant.sku}` }))]} /></label>
             <label>暫存商品名稱（選填）<input className="input" name="tempProductName" maxLength={160} placeholder="未建檔商品才需要填寫" /></label>
             <label>規格備註（選填）<input className="input" name="variantName" maxLength={160} placeholder="例如：黑色／M" /></label>
             <label>單件成本<input className="input" name="unitCost" type="number" min="0.01" step="0.01" required placeholder="例如：18500" /></label>
@@ -104,7 +107,7 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
         <div className={styles.itemHeading}><div><strong>{order.po_number}</strong><small>{supplierNameById.get(order.supplier_id) ?? "未知供應商"} · 下單 {formatDate(order.ordered_date)}{order.expected_date ? ` · 預計 ${formatDate(order.expected_date)}` : ""}</small></div><span className="badge badge-stock">{statusLabels[order.status] ?? order.status}</span></div>
         <div className={styles.itemBody}>{orderItems.map((item) => <div className={styles.line} key={item.id}><span>{item.product_name}{item.variant_name ? ` · ${item.variant_name}` : ""}<small>{item.sku ?? "暫存商品"} · 數量 {item.quantity} · 單件 {formatMoney(Number(item.unit_cost), item.currency)}</small></span><strong>{formatMoney(Number(item.total_cost), item.currency)}</strong></div>)}{!orderItems.length && <p className={styles.hint}>尚無採購明細。</p>}</div>
         <div className={styles.costs}><span>商品成本 <strong>{formatMoney(Number(order.subtotal), order.currency)}</strong></span><span>運費 <strong>{formatMoney(Number(order.shipping_cost), order.currency)}</strong></span><span>其他 <strong>{formatMoney(Number(order.other_cost), order.currency)}</strong></span><span>合計 <strong>{formatMoney(Number(order.total_cost), order.currency)}</strong></span></div>
-        <div className={styles.itemFooter}><span>{order.quotation_id ? `來源報價：${quotationLabelById.get(order.quotation_id) ?? "已封存報價"}` : "未連結報價單"} · 匯率 {order.exchange_rate}</span><div className={styles.actions}>{order.status !== "cancelled" && order.status !== "received" && <Link className="button button-secondary button-small" href={`/admin/purchase-orders/${order.id}/receive`}>登記到貨</Link>}<form action={updatePurchaseOrderStatusAction} className={styles.statusForm}><input type="hidden" name="id" value={order.id} /><label className="srOnly" htmlFor={`po-status-${order.id}`}>更新採購單狀態</label><select className="input" id={`po-status-${order.id}`} name="status" defaultValue={order.status}>{Object.entries(statusLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select><button className="button button-secondary button-small" type="submit">更新狀態</button></form></div></div>
+        <div className={styles.itemFooter}><span>{order.quotation_id ? `來源報價：${quotationLabelById.get(order.quotation_id) ?? "已封存報價"}` : "未連結報價單"} · 匯率 {order.exchange_rate}</span><div className={styles.actions}>{order.status !== "cancelled" && order.status !== "received" && <Link className="button button-secondary button-small" href={`/admin/purchase-orders/${order.id}/receive`}>登記到貨</Link>}<form action={updatePurchaseOrderStatusAction} className={styles.statusForm}><input type="hidden" name="id" value={order.id} /><label className="srOnly" htmlFor={`po-status-${order.id}`}>更新採購單狀態</label><div className={styles.statusSelect}><RoundedSelect id={`po-status-${order.id}`} name="status" defaultValue={order.status} options={statusOptions} ariaLabel="更新採購單狀態" /></div><button className="button button-secondary button-small" type="submit">更新狀態</button></form></div></div>
       </article>; })}</div> : <p className={adminStyles.empty}>目前尚無採購紀錄。</p>}
     </section>
   </>;

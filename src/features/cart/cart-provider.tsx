@@ -33,6 +33,7 @@ type CartContextValue = {
 
 const STORAGE_KEY = "gyeot-cart-v1";
 const LEGACY_STORAGE_KEY = "morii-demo-cart-v1";
+const AVAILABILITY_REFRESH_MS = 60_000;
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -112,6 +113,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!storageReady || !variantSignature) return;
     void refreshAvailability();
+  }, [refreshAvailability, storageReady, variantSignature]);
+
+  // Keep an open cart reasonably fresh without creating a request loop. The
+  // interval is deliberately slow, skips hidden tabs, and shares the same
+  // in-flight/signature guard as manual refreshes.
+  useEffect(() => {
+    if (!storageReady || !variantSignature) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshAvailability();
+    }, AVAILABILITY_REFRESH_MS);
+    return () => window.clearInterval(timer);
   }, [refreshAvailability, storageReady, variantSignature]);
 
   useEffect(() => {

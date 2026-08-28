@@ -30,6 +30,7 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
     Object.entries(selections).every(([name, value]) => variant.options[name] === value),
   );
   const selectedVariantId = selectedVariant?.id;
+  const selectionInvalid = Boolean(product.variants?.length) && !selectedVariant;
   const color = Object.entries(selections).find(([name]) => ["顏色", "color", "colour", "色系"].includes(name.toLowerCase()))?.[1] ?? Object.values(selections)[0] ?? "";
   const size = Object.entries(selections).find(([name]) => ["尺寸", "size", "尺碼"].includes(name.toLowerCase()))?.[1] ?? Object.values(selections)[1] ?? "";
   const availability = selectedVariantId && liveStatus?.variantId === selectedVariantId
@@ -37,7 +38,7 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
     : selectedVariant?.availability ?? (product.availability === "mixed" ? "in_stock" : product.availability);
   const price = selectedVariantId && liveStatus?.variantId === selectedVariantId ? liveStatus.price : selectedVariant?.price ?? product.price;
   const arrival = selectedVariantId && liveStatus?.variantId === selectedVariantId ? liveStatus.arrival : selectedVariant?.arrival ?? product.arrival;
-  const unavailable = selectedVariant ? availability === "unavailable" : !product.isAvailable;
+  const unavailable = selectionInvalid || (selectedVariant ? availability === "unavailable" : !product.isAvailable);
   const syncing = Boolean(selectedVariantId) && (syncState === "idle" || syncState === "checking");
   const cannotPurchase = unavailable || syncing;
 
@@ -105,6 +106,14 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
   }, [product.price, selectedVariant?.price, selectedVariantId, syncVariantAvailability]);
 
   useEffect(() => {
+    if (!selectedVariantId) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void syncVariantAvailability(selectedVariantId, selectedVariant?.price ?? product.price);
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [product.price, selectedVariant?.price, selectedVariantId, syncVariantAvailability]);
+
+  useEffect(() => {
     trackEvent("view_item", { currency: "TWD", value: price, items: [toAnalyticsItem({ id: product.id, name: product.name, price, variant: selectedVariant?.id })] });
   }, [price, product.id, product.name, selectedVariant?.id]);
 
@@ -123,7 +132,7 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
 
   return <div className={styles.panel}>
     {optionGroups.map((group) => <fieldset key={group.name}><legend>{group.name}：<strong>{selections[group.name]}</strong></legend><div className={styles.options}>{group.values.map((item) => <button className={selections[group.name] === item ? styles.selected : ""} type="button" key={item} aria-pressed={selections[group.name] === item} onClick={() => { setSelections((current) => ({ ...current, [group.name]: item })); setLiveStatus(null); setSyncState("idle"); setAdded(false); }}>{item}</button>)}</div></fieldset>)}
-    <p className={styles.stock} aria-live="polite">{syncing ? "正在同步此規格的庫存…" : unavailable ? "此規格目前售罄" : availability === "preorder" ? `預購｜預計 ${arrival ?? "確認中"} 到貨` : `${Object.values(selections).join("／")} · 庫存會在結帳時再次確認`}</p>
+    <p className={styles.stock} aria-live="polite">{syncing ? "正在同步此規格的庫存…" : selectionInvalid ? "此規格目前無法購買，請重新選擇" : unavailable ? "此規格目前售罄" : availability === "preorder" ? `預購｜預計 ${arrival ?? "確認中"} 到貨` : `${Object.values(selections).join("／")} · 庫存會在結帳時再次確認`}</p>
     {syncState === "error" && <p className={styles.syncWarning} role="status">目前無法即時同步庫存；加入後仍會由伺服器再次驗證。</p>}
     <div className={styles.actions}><button className="button button-primary" type="button" onClick={addToCart} disabled={cannotPurchase}>{added ? "已加入購物車 ✓" : "加入購物車"}</button><button className="button button-secondary" type="button" onClick={buyNow} disabled={cannotPurchase}>立即購買</button></div>
     <p className={styles.demo}>價格、規格與庫存會在商品載入、切換規格及結帳時再次驗證。</p>

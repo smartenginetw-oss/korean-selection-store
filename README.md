@@ -27,7 +27,7 @@ npm run dev
 - 初始 schema、RLS、PII 邊界、庫存保留與付款事件去重欄位已建立；22 張 public table 均啟用 RLS。
 - Data API 採明確 grants：匿名只讀商品目錄；`profiles`、`addresses`、訂單與付款資料不提供匿名存取。
 - `.env.local` 僅存 Supabase URL 與 publishable key，已被 `.gitignore` 排除；service-role key 不放入本機前端設定。
-- 商品頁已改由 Supabase catalog 讀取；`/api/checkout` 優先使用 server-only service role，未設定時改呼叫 `checkout` Edge Function，由 Supabase secrets 執行真正建單。
+- 商品頁已改由 Supabase catalog 讀取；商品詳情路由採 on-demand server rendering，避免上架、價格或售罄狀態被部署時的靜態快照卡住；`/api/checkout` 優先使用 server-only service role，未設定時改呼叫 `checkout` Edge Function，由 Supabase secrets 執行真正建單。
 - 商品詳情頁會在載入、切換規格與重新回到頁面時，以 `no-store` 公開狀態檢查同步規格的現貨／預購／售罄與價格；同步失敗時仍由結帳 Server 做最後驗證。
 - 目前付款仍是測試 adapter，會建立訂單與付款紀錄，不會產生真實扣款；建單時的庫存保留會在付款完成後持續到後台出貨結算，避免已付款訂單被逾時清理。
 - Checkout 已支援 ECPay Stage 的信用卡、ATM 虛擬帳號與超商代碼選擇；ATM／超商代碼的繳費資訊會由 `ecpay-payment-info` callback 保存到訂單明細。這仍是 Stage 整合，不能視為正式金流已上線。

@@ -1,5 +1,7 @@
 import { requireProcurement } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
+import { RoundedDatePicker } from "@/components/rounded-date-picker";
+import { RoundedSelect } from "@/components/rounded-select";
 import adminStyles from "../admin.module.css";
 import { createQuotationAction, updateQuotationStatusAction } from "./actions";
 import styles from "./quotations.module.css";
@@ -14,13 +16,15 @@ const statusLabels: Record<string, string> = {
   converted: "已轉採購單",
 };
 
-const currencies = ["KRW", "TWD", "USD", "CNY"];
+const currencyOptions = ["KRW", "TWD", "USD", "CNY"].map((currency) => ({ value: currency, label: currency }));
 
 function todayInput() {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
   return `${values.year}-${values.month}-${values.day}`;
 }
+
+const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({ value, label }));
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", dateStyle: "medium" }).format(new Date(`${value}T00:00:00Z`));
@@ -66,15 +70,15 @@ export default async function AdminQuotationsPage({ searchParams }: { searchPara
         {!suppliers.length && <p className={styles.hint}>請先到「供應商」建立至少一家啟用中的供應商。</p>}
         <form action={createQuotationAction} className={styles.form}>
           <div className={styles.twoColumns}>
-            <label>供應商<select className="input" name="supplierId" required disabled={!suppliers.length} defaultValue=""><option value="" disabled>選擇供應商</option>{suppliers.filter((supplier) => supplier.is_active).map((supplier) => <option value={supplier.id} key={supplier.id}>{supplier.name} · {supplier.country}</option>)}</select></label>
+            <label>供應商<RoundedSelect name="supplierId" options={[{ value: "", label: "選擇供應商" }, ...suppliers.filter((supplier) => supplier.is_active).map((supplier) => ({ value: supplier.id, label: `${supplier.name} · ${supplier.country}` }))]} defaultValue="" disabled={!suppliers.length} ariaLabel="供應商" /></label>
             <label>報價單號<input className="input" name="quoteNumber" required maxLength={80} placeholder="例如：SEOUL-2026-0827" /></label>
-            <label>報價日期<input className="input" name="quoteDate" type="date" required defaultValue={todayInput()} /></label>
-            <label>幣別<select className="input" name="currency" defaultValue="KRW">{currencies.map((currency) => <option value={currency} key={currency}>{currency}</option>)}</select></label>
+            <label>報價日期<RoundedDatePicker name="quoteDate" label="報價日期" initialValue={todayInput()} required /></label>
+            <label>幣別<RoundedSelect name="currency" options={currencyOptions} defaultValue="KRW" ariaLabel="幣別" /></label>
             <label>匯率（對 TWD）<input className="input" name="exchangeRate" type="number" min="0.000001" step="0.000001" defaultValue="1" required /></label>
-            <label>狀態<select className="input" name="status" defaultValue="draft">{Object.entries(statusLabels).filter(([value]) => value !== "converted").map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+            <label>狀態<RoundedSelect name="status" options={statusOptions.filter(({ value }) => value !== "converted")} defaultValue="draft" ariaLabel="報價單狀態" /></label>
           </div>
-          <label>商品（選填）<select className="input" name="productId" defaultValue=""><option value="">暫存商品／下方自行填寫</option>{products.map((product) => <option value={product.id} key={product.id}>{product.name}</option>)}</select></label>
-          <label>規格（選填）<select className="input" name="variantId" defaultValue=""><option value="">不指定規格</option>{variants.map((variant) => <option value={variant.id} key={variant.id}>{productNameById.get(variant.product_id) ?? "商品"} · {variant.sku}</option>)}</select></label>
+          <label>商品（選填）<RoundedSelect name="productId" options={[{ value: "", label: "暫存商品／下方自行填寫" }, ...products.map((product) => ({ value: product.id, label: product.name }))]} defaultValue="" ariaLabel="商品" /></label>
+          <label>規格（選填）<RoundedSelect name="variantId" options={[{ value: "", label: "不指定規格" }, ...variants.map((variant) => ({ value: variant.id, label: `${productNameById.get(variant.product_id) ?? "商品"} · ${variant.sku}` }))]} defaultValue="" ariaLabel="規格" /></label>
           <div className={styles.twoColumns}>
             <label>暫存商品名稱（選填）<input className="input" name="tempProductName" maxLength={160} placeholder="未建檔商品才需要填寫" /></label>
             <label>規格備註（選填）<input className="input" name="variantName" maxLength={160} placeholder="例如：黑色／M" /></label>
@@ -97,7 +101,7 @@ export default async function AdminQuotationsPage({ searchParams }: { searchPara
       {quotations.length ? <div className={styles.list}>{quotations.map((quotation) => { const quotationItems = itemsByQuotation.get(quotation.id) ?? []; const total = quotationItems.reduce((sum, item) => sum + Number(item.total_cost || 0), 0); return <article className={styles.item} key={quotation.id}>
         <div className={styles.itemHeading}><div><strong>{quotation.quote_number}</strong><small>{supplierNameById.get(quotation.supplier_id) ?? "未知供應商"} · {formatDate(quotation.quote_date)}</small></div><span className={`badge ${quotation.status === "approved" ? "badge-stock" : quotation.status === "rejected" ? "badge-preorder" : "badge-stock"}`}>{statusLabels[quotation.status] ?? quotation.status}</span></div>
         <div className={styles.itemBody}>{quotationItems.map((item) => <div className={styles.line} key={item.id}><span>{item.product_name}{item.variant_name ? ` · ${item.variant_name}` : ""}<small>{item.sku ?? "暫存商品"} · 數量 {item.quantity} · MOQ {item.moq}</small></span><strong>{formatMoney(Number(item.total_cost), item.currency)}</strong></div>)}{!quotationItems.length && <p className={styles.hint}>尚無報價明細。</p>}</div>
-        <div className={styles.itemFooter}><span>合計 {formatMoney(total, quotation.currency)} · 匯率 {quotation.exchange_rate}</span><form action={updateQuotationStatusAction} className={styles.statusForm}><input type="hidden" name="id" value={quotation.id} /><label className="srOnly" htmlFor={`status-${quotation.id}`}>更新報價單狀態</label><select className="input" id={`status-${quotation.id}`} name="status" defaultValue={quotation.status}>{Object.entries(statusLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select><button className="button button-secondary button-small" type="submit">更新狀態</button></form></div>
+        <div className={styles.itemFooter}><span>合計 {formatMoney(total, quotation.currency)} · 匯率 {quotation.exchange_rate}</span><form action={updateQuotationStatusAction} className={styles.statusForm}><input type="hidden" name="id" value={quotation.id} /><label className="srOnly" htmlFor={`status-${quotation.id}`}>更新報價單狀態</label><div className={styles.statusSelect}><RoundedSelect id={`status-${quotation.id}`} name="status" options={statusOptions} defaultValue={quotation.status} ariaLabel="更新報價單狀態" /></div><button className="button button-secondary button-small" type="submit">更新狀態</button></form></div>
       </article>; })}</div> : <p className={adminStyles.empty}>目前尚無報價紀錄。</p>}
     </section>
   </>;
