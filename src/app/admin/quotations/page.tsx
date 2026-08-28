@@ -27,6 +27,18 @@ function todayInput() {
 }
 
 const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({ value, label }));
+const createStatusOptions = statusOptions.filter(({ value }) => value !== "converted");
+
+function statusOptionsFor(status: string) {
+  const legalStatuses = status === "draft"
+    ? ["draft", "received", "rejected"]
+    : status === "received"
+      ? ["received", "approved", "rejected"]
+      : status === "approved"
+        ? ["approved", "converted"]
+        : [status];
+  return statusOptions.filter(({ value }) => legalStatuses.includes(value));
+}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", dateStyle: "medium" }).format(new Date(`${value}T00:00:00Z`));
@@ -76,7 +88,7 @@ export default async function AdminQuotationsPage({ searchParams }: { searchPara
             <label>報價日期<RoundedDatePicker name="quoteDate" label="報價日期" initialValue={todayInput()} required /></label>
             <label>幣別<RoundedSelect name="currency" options={currencyOptions} defaultValue="KRW" ariaLabel="幣別" /></label>
             <label>匯率（對 TWD）<input className="input" name="exchangeRate" type="number" min="0.000001" step="0.000001" defaultValue="1" required /></label>
-            <label>狀態<RoundedSelect name="status" options={statusOptions.filter(({ value }) => value !== "converted")} defaultValue="draft" ariaLabel="報價單狀態" /></label>
+            <label>狀態<RoundedSelect name="status" options={createStatusOptions} defaultValue="draft" ariaLabel="報價單狀態" /></label>
           </div>
           <QuotationLineItems products={products} variants={variants} />
           <label>報價備註<textarea className="input" name="note" rows={3} maxLength={2000} placeholder="付款、交期或其他條件（選填）" /></label>
@@ -94,7 +106,7 @@ export default async function AdminQuotationsPage({ searchParams }: { searchPara
       {quotations.length ? <div className={styles.list}>{quotations.map((quotation) => { const quotationItems = itemsByQuotation.get(quotation.id) ?? []; const total = quotationItems.reduce((sum, item) => sum + Number(item.total_cost || 0), 0); return <article className={styles.item} key={quotation.id}>
         <div className={styles.itemHeading}><div><strong>{quotation.quote_number}</strong><small>{supplierNameById.get(quotation.supplier_id) ?? "未知供應商"} · {formatDate(quotation.quote_date)}</small></div><span className={`badge ${quotation.status === "approved" ? "badge-stock" : quotation.status === "rejected" ? "badge-preorder" : "badge-stock"}`}>{statusLabels[quotation.status] ?? quotation.status}</span></div>
         <div className={styles.itemBody}>{quotationItems.map((item) => <div className={styles.line} key={item.id}><span>{item.product_name}{item.variant_name ? ` · ${item.variant_name}` : ""}<small>{item.sku ?? "暫存商品"} · 數量 {item.quantity} · MOQ {item.moq}</small></span><strong>{formatMoney(Number(item.total_cost), item.currency)}</strong></div>)}{!quotationItems.length && <p className={styles.hint}>尚無報價明細。</p>}</div>
-        <div className={styles.itemFooter}><span>合計 {formatMoney(total, quotation.currency)} · 匯率 {quotation.exchange_rate}</span><div className={styles.footerActions}>{quotation.status === "approved" && <Link className="button button-secondary button-small" href={`/admin/purchase-orders?quotationId=${quotation.id}`}>轉成採購單</Link>}<form action={updateQuotationStatusAction} className={styles.statusForm}><input type="hidden" name="id" value={quotation.id} /><label className="srOnly" htmlFor={`status-${quotation.id}`}>更新報價單狀態</label><div className={styles.statusSelect}><RoundedSelect id={`status-${quotation.id}`} name="status" options={statusOptions} defaultValue={quotation.status} ariaLabel="更新報價單狀態" /></div><button className="button button-secondary button-small" type="submit">更新狀態</button></form></div></div>
+        <div className={styles.itemFooter}><span>合計 {formatMoney(total, quotation.currency)} · 匯率 {quotation.exchange_rate}</span><div className={styles.footerActions}>{quotation.status === "approved" && <Link className="button button-secondary button-small" href={`/admin/purchase-orders?quotationId=${quotation.id}`}>轉成採購單</Link>}{statusOptionsFor(quotation.status).length > 1 && <form action={updateQuotationStatusAction} className={styles.statusForm}><input type="hidden" name="id" value={quotation.id} /><label className="srOnly" htmlFor={`status-${quotation.id}`}>更新報價單狀態</label><div className={styles.statusSelect}><RoundedSelect id={`status-${quotation.id}`} name="status" options={statusOptionsFor(quotation.status)} defaultValue={quotation.status} ariaLabel="更新報價單狀態" /></div><button className="button button-secondary button-small" type="submit">更新狀態</button></form>}</div></div>
       </article>; })}</div> : <p className={adminStyles.empty}>目前尚無報價紀錄。</p>}
     </section>
   </>;

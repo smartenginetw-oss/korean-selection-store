@@ -161,10 +161,18 @@ export async function createQuotationAction(formData: FormData) {
   }
 
   if (data.status !== "draft") {
-    const { error: statusError } = await supabase.from("supplier_quotations").update({ status: data.status }).eq("id", quotation.id);
-    if (statusError) {
-      console.error("[admin/quotations] initial status update failed", statusError.message);
-      quotationRedirect("error", "報價明細已建立，但狀態更新失敗，請在列表中重新更新。 ");
+    // The database guard requires a quote to be received before approval.
+    // Preserve the convenient create form by applying the two legal steps.
+    const statusSteps = data.status === "approved" ? ["received", "approved"] : [data.status];
+    for (const statusStep of statusSteps) {
+      const { error: statusError } = await supabase.rpc("update_supplier_quotation_status", {
+        p_quotation_id: quotation.id,
+        p_status: statusStep,
+      });
+      if (statusError) {
+        console.error("[admin/quotations] initial status update failed", statusError.message);
+        quotationRedirect("error", "報價明細已建立，但狀態更新失敗，請在列表中重新更新。 ");
+      }
     }
   }
 
@@ -179,9 +187,14 @@ export async function updateQuotationStatusAction(formData: FormData) {
   if (!id.success || !status.success) quotationRedirect("error", "報價單狀態資料不正確。 ");
 
   const supabase = await createClient();
-  const { error } = await supabase.from("supplier_quotations").update({ status: status.data }).eq("id", id.data);
+  const { error } = await supabase.rpc("update_supplier_quotation_status", {
+    p_quotation_id: id.data,
+    p_status: status.data,
+  });
   if (error) {
     console.error("[admin/quotations] status update failed", error.message);
+    if (error.code === "22023") quotationRedirect("error", "報價單狀態不能這樣變更；請依序完成收到、核准與轉採購單流程。 ");
+    if (error.code === "P0002") quotationRedirect("error", "找不到這張報價單，請重新整理後再試。 ");
     quotationRedirect("error", "報價單狀態尚未更新。 ");
   }
   revalidatePath("/admin/quotations");

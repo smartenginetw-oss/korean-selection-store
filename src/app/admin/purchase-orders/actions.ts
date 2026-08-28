@@ -200,7 +200,10 @@ export async function createPurchaseOrderAction(formData: FormData) {
     }
   }
   if (quotationSupplierId && data.quotationId) {
-    const { error: quotationError } = await supabase.from("supplier_quotations").update({ status: "converted" }).eq("id", data.quotationId).in("status", ["draft", "received", "approved"]);
+    const { error: quotationError } = await supabase.rpc("update_supplier_quotation_status", {
+      p_quotation_id: data.quotationId,
+      p_status: "converted",
+    });
     if (quotationError) console.error("[admin/purchase-orders] quotation conversion failed", quotationError.message);
   }
 

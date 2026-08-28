@@ -1891,6 +1891,10 @@ export type Database = {
         Args: { p_purchase_order_id: string; p_status: string }
         Returns: Json
       }
+      update_supplier_quotation_status: {
+        Args: { p_quotation_id: string; p_status: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
