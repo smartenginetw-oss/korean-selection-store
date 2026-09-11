@@ -70,14 +70,16 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
   const params = await searchParams;
   const activeFilter = normalizePurchaseOrderFilter(params.filter);
   const supabase = await createClient();
-  const [suppliersResult, productsResult, variantsResult, quotationsResult, quotationItemsResult, ordersResult, itemsResult] = await Promise.all([
+  const [suppliersResult, productsResult, variantsResult, quotationsResult, quotationItemsResult, ordersResult, itemsResult, receiptsResult, receiptItemsResult] = await Promise.all([
     supabase.from("suppliers").select("id,name,country,is_active").order("is_active", { ascending: false }).order("name"),
     supabase.from("products").select("id,name").eq("status", "active").order("name"),
     supabase.from("product_variants").select("id,product_id,sku").eq("status", "active").order("sku"),
     supabase.from("supplier_quotations").select("id,supplier_id,quote_number,status,currency,exchange_rate").order("quote_number"),
     supabase.from("supplier_quotation_items").select("id,quotation_id,product_id,variant_id,product_name,variant_name,sku,unit_cost,quantity,currency").order("created_at"),
     supabase.from("purchase_orders").select("id,po_number,supplier_id,quotation_id,currency,exchange_rate,ordered_date,expected_date,status,subtotal,shipping_cost,other_cost,total_cost,note,created_at").order("ordered_date", { ascending: false }).order("created_at", { ascending: false }),
-    supabase.from("purchase_order_items").select("id,purchase_order_id,product_name,variant_name,sku,unit_cost,quantity,currency,total_cost").order("created_at"),
+    supabase.from("purchase_order_items").select("id,purchase_order_id,product_name,variant_name,sku,variant_id,unit_cost,quantity,currency,total_cost").order("created_at"),
+    supabase.from("purchase_order_receipts").select("id,purchase_order_id"),
+    supabase.from("purchase_order_receipt_items").select("receipt_id,quantity_received,damaged_quantity"),
   ]);
 
   const suppliers = suppliersResult.data ?? [];
@@ -86,6 +88,8 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
   const quotations = quotationsResult.data ?? [];
   const quotationItems = quotationItemsResult.data ?? [];
   const orders = ordersResult.data ?? [];
+  const receipts = receiptsResult.data ?? [];
+  const receiptItems = receiptItemsResult.data ?? [];
   const visibleOrders = orders.filter((order) => {
     if (activeFilter === "receivable") return order.status === "ordered" || order.status === "partial_received";
     if (activeFilter === "open") return order.status === "draft" || order.status === "ordered" || order.status === "partial_received";
@@ -95,9 +99,24 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
   });
   const items = itemsResult.data ?? [];
   const supplierNameById = new Map(suppliers.map((supplier) => [supplier.id, supplier.name]));
-  const hasReadError = suppliersResult.error || productsResult.error || variantsResult.error || quotationsResult.error || quotationItemsResult.error || ordersResult.error || itemsResult.error;
+  const hasReadError = suppliersResult.error || productsResult.error || variantsResult.error || quotationsResult.error || quotationItemsResult.error || ordersResult.error || itemsResult.error || receiptsResult.error || receiptItemsResult.error;
   const itemsByOrder = new Map<string, typeof items>();
   for (const item of items) itemsByOrder.set(item.purchase_order_id, [...(itemsByOrder.get(item.purchase_order_id) ?? []), item]);
+  const receiptOrderIdById = new Map(receipts.map((receipt) => [receipt.id, receipt.purchase_order_id]));
+  const receivingProgressByOrder = new Map<string, { ordered: number; good: number; damaged: number }>();
+  for (const item of items) {
+    const progress = receivingProgressByOrder.get(item.purchase_order_id) ?? { ordered: 0, good: 0, damaged: 0 };
+    if (item.variant_id) progress.ordered += Number(item.quantity) || 0;
+    receivingProgressByOrder.set(item.purchase_order_id, progress);
+  }
+  for (const item of receiptItems) {
+    const purchaseOrderId = receiptOrderIdById.get(item.receipt_id);
+    if (!purchaseOrderId) continue;
+    const progress = receivingProgressByOrder.get(purchaseOrderId) ?? { ordered: 0, good: 0, damaged: 0 };
+    progress.good += Number(item.quantity_received) || 0;
+    progress.damaged += Number(item.damaged_quantity) || 0;
+    receivingProgressByOrder.set(purchaseOrderId, progress);
+  }
   const quotationLabelById = new Map(quotations.map((quotation) => [quotation.id, `${quotation.quote_number} · ${supplierNameById.get(quotation.supplier_id) ?? "供應商"}`]));
   const approvedQuotations = quotations.filter((quotation) => quotation.status === "approved");
   const selectedQuotation = params.quotationId ? approvedQuotations.find((quotation) => quotation.id === params.quotationId) : undefined;
@@ -167,9 +186,10 @@ export default async function AdminPurchaseOrdersPage({ searchParams }: { search
         </form>
       </div>
       {activeFilter === "receivable" && <p className={styles.filterHint}>目前只顯示可登記到貨的採購單；草稿需先更新為「已下單」。</p>}
-      {visibleOrders.length ? <div className={styles.list}>{visibleOrders.map((order) => { const orderItems = itemsByOrder.get(order.id) ?? []; return <article className={styles.item} key={order.id}>
+      {visibleOrders.length ? <div className={styles.list}>{visibleOrders.map((order) => { const orderItems = itemsByOrder.get(order.id) ?? []; const progress = receivingProgressByOrder.get(order.id) ?? { ordered: 0, good: 0, damaged: 0 }; const accounted = progress.good + progress.damaged; const remaining = Math.max(0, progress.ordered - accounted); const progressPercent = progress.ordered ? Math.min(100, Math.round((accounted / progress.ordered) * 100)) : 0; return <article className={styles.item} key={order.id}>
         <div className={styles.itemHeading}><div><strong>{order.po_number}</strong><small>{supplierNameById.get(order.supplier_id) ?? "未知供應商"} · 下單 {formatDate(order.ordered_date)}{order.expected_date ? ` · 預計 ${formatDate(order.expected_date)}` : ""}</small></div><span className="badge badge-stock">{statusLabels[order.status] ?? order.status}</span></div>
         <div className={styles.itemBody}>{orderItems.map((item) => <div className={styles.line} key={item.id}><span>{item.product_name}{item.variant_name ? ` · ${item.variant_name}` : ""}<small>{item.sku ?? "暫存商品"} · 數量 {item.quantity} · 單件 {formatMoney(Number(item.unit_cost), item.currency)}</small></span><strong>{formatMoney(Number(item.total_cost), item.currency)}</strong></div>)}{!orderItems.length && <p className={styles.hint}>尚無採購明細。</p>}</div>
+        <div className={styles.receivingProgress}><div className={styles.progressHeader}><span>到貨進度</span><strong>{progress.ordered ? `${accounted} / ${progress.ordered} 件` : "無可自動入庫明細"}</strong></div>{progress.ordered > 0 ? <><div className={styles.progressTrack} aria-hidden="true"><span style={{ width: `${progressPercent}%` }} /></div><small className={styles.progressMeta}>良品 {progress.good} 件 · 損耗／瑕疵 {progress.damaged} 件 · 剩餘 {remaining} 件</small></> : <small className={styles.progressMeta}>暫存商品無法自動入庫，請人工核對。</small>}</div>
         <div className={styles.costs}><span>商品成本 <strong>{formatMoney(Number(order.subtotal), order.currency)}</strong></span><span>運費 <strong>{formatMoney(Number(order.shipping_cost), order.currency)}</strong></span><span>其他 <strong>{formatMoney(Number(order.other_cost), order.currency)}</strong></span><span>合計 <strong>{formatMoney(Number(order.total_cost), order.currency)}</strong></span></div>
         <div className={styles.itemFooter}><span>{order.quotation_id ? `來源報價：${quotationLabelById.get(order.quotation_id) ?? "已封存報價"}` : "未連結報價單"} · 匯率 {order.exchange_rate}</span><div className={styles.actions}>{order.status !== "cancelled" && order.status !== "received" && <Link className="button button-secondary button-small" href={`/admin/purchase-orders/${order.id}/receive`}>登記到貨</Link>}{statusOptionsFor(order.status).length > 1 && <form action={updatePurchaseOrderStatusAction} className={styles.statusForm}><input type="hidden" name="id" value={order.id} /><label className="srOnly" htmlFor={`po-status-${order.id}`}>更新採購單狀態</label><div className={styles.statusSelect}><RoundedSelect id={`po-status-${order.id}`} name="status" defaultValue={order.status} options={statusOptionsFor(order.status)} ariaLabel="更新採購單狀態" /></div><button className="button button-secondary button-small" type="submit">更新狀態</button></form>}</div></div>
       </article>; })}</div> : <p className={adminStyles.empty}>目前尚無採購紀錄。</p>}
